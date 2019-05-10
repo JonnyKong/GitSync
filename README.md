@@ -1,1 +1,3 @@
 # GitSync
+
+Git over NDN
