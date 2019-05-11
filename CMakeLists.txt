@@ -14,6 +14,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall")
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -ggdb")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
+add_compile_definitions(_GNU_SOURCE)
+
 INCLUDE(FindPkgConfig)
 pkg_check_modules(NDN_CXX libndn-cxx)
 
