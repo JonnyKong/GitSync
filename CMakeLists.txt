@@ -7,12 +7,14 @@ if (${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
     Please make a new directory (called a build directory) and run CMake from there.
     You may need to remove CMakeCache.txt." )
 endif()
-
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c14 -Wall")
-set(CMAKE_C_FLAGS_DEBUG "-O0 -ggdb")
-set(CMAKE_C_FLAGS_RELEASE "-O3")
-
 # Output binaries to a sub directory "bin"
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall")
+set(CMAKE_CXX_FLAGS_DEBUG "-O0 -ggdb")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+
+INCLUDE(FindPkgConfig)
+pkg_check_modules(NDN_CXX libndn-cxx)
 
 add_subdirectory(src)
