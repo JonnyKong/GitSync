@@ -18,5 +18,6 @@ add_compile_definitions(_GNU_SOURCE)
 
 INCLUDE(FindPkgConfig)
 pkg_check_modules(NDN_CXX libndn-cxx)
+find_package(Boost COMPONENTS system filesystem random REQUIRED)
 
 add_subdirectory(src)
