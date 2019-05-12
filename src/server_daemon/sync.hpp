@@ -13,8 +13,8 @@
 namespace ndn {
 namespace gitsync {
 
-using VersionVector = std::map<Name, uint64_t>;
-using UpdateCallback = function<void(Name, uint64_t)>;
+using VersionVector = std::map<std::string, uint64_t>;
+using UpdateCallback = function<void(std::string, std::string, uint64_t)>;  // (repo, branch, timestamp)
 
 class Sync {
 public:
@@ -27,7 +27,11 @@ public:
   //  timestamp. Create the prefix if it doesn't exist.
   // Need higher levels to enforce write permission.
   bool
-  publishData(Name prefix, uint64_t t = toUnixTimestamp(time::system_clock::now()).count());
+  publishData(std::string repo, std::string branch, uint64_t t = 0);
+
+  // Subscribe to a repo.
+  void
+  subscribe(std::string repo);
 
 
 private:
@@ -42,9 +46,10 @@ private:
   inline static VersionVector
   decodeVector(const std::string& vector_str);
 
-  // Transmit sync interest periodically. This function will re-schedule itself,
-  //  but when called directly, it will send out a sync interest immediately and
-  //  re-schedule the subsequent events.
+  // Transmit 1 sync interest for each non-empty repo periodically. This function 
+  //  will re-schedule itself, but when called directly, it will send out a sync 
+  //  interest immediately and re-schedule the subsequent events.
+  // Interest format: /<sync_prefix>/<repo_name>/sync/<sync_vector>
   void
   retxSyncInterest();
 
@@ -59,9 +64,8 @@ private:
   Scheduler m_scheduler;
   Name m_sync_prefix;
   UpdateCallback m_update_cb;
-  VersionVector m_vector;
-
-  // scheduler::EventId m_retx_event;
+  std::map<std::string, VersionVector> m_vector;
+  std::set<std::string> m_subscribed_repo;
 
   boost::mt19937 m_random_generator;
   boost::variate_generator<boost::mt19937&, boost::uniform_int<>> m_retx_rand_ms;  // ms
