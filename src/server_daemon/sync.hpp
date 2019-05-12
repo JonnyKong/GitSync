@@ -61,7 +61,7 @@ private:
   UpdateCallback m_update_cb;
   VersionVector m_vector;
 
-  EventId m_retx_event;
+  // scheduler::EventId m_retx_event;
 
   boost::mt19937 m_random_generator;
   boost::variate_generator<boost::mt19937&, boost::uniform_int<>> m_retx_rand_ms;  // ms

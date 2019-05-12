@@ -71,7 +71,7 @@ void
 Sync::retxSyncInterest()
 {
   verbose("Sync: Retx Sync Interest\n");
-  m_scheduler.cancelEvent(m_retx_event);
+  m_scheduler.cancelAllEvents();
 
   Name i_name(m_sync_prefix);
   i_name.append(encodeVector(m_vector));
@@ -83,8 +83,7 @@ Sync::retxSyncInterest()
 
   // Schedule next retransmission
   int delay_ms = m_retx_rand_ms();
-  m_retx_event = m_scheduler.scheduleEvent(time::milliseconds(delay_ms),
-                                           [this] {
+  m_scheduler.schedule(time::milliseconds(delay_ms), [this] {
     retxSyncInterest();
   });
 }
