@@ -1,9 +1,10 @@
 // Persistent storage with MongoDB
 // Each document in the database have the following JSON format:
 //  { 
-//    "_id" : ObjectId("5cdf7467eaa8e044472b2982"), 
-//    "hash": cf23df2207d99a74fbe169e3eba035e633b65d94
-//    "data" : BinData(0,"+hEoM/oRKDP6ESgz+hEoM/oRKDP6ESgz+hEoM/oRKDM=") 
+//    "_id" :   ObjectId("5cdf7467eaa8e044472b2982"), 
+//    "hash":   cf23df2207d99a74fbe169e3eba035e633b65d94
+//    "data" :  BinData(0,"+hEoM/oRKDP6ESgz+hEoM/oRKDP6ESgz+hEoM/oRKDM=") 
+//    "len":    32
 //  }
 
 // Run "brew install mongodb" to install on macOS
@@ -44,7 +45,7 @@ private:
   const std::string m_collection;
 
   mongocxx::instance inst{};
-  mongocxx::client conn{mongocxx::uri{}};   // Init with default localhost uri
+  mongocxx::client conn{ mongocxx::uri{} };   // Init with default localhost uri
 };
 
 } // namespace gitsync

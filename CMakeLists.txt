@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.10.0)
 project(GitSync)
+enable_testing()
 
 # Enforce out-of-source build
 if (${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
@@ -25,3 +26,4 @@ find_package(Boost COMPONENTS system filesystem random REQUIRED)
 
 
 add_subdirectory(src)
+# add_subdirectory(test)

@@ -1,8 +1,20 @@
 #include "storage.hpp"
 #include "logging.hpp"
 
+#include <cstring>
+
 #include <bsoncxx/builder/stream/document.hpp>
+#include <bsoncxx/builder/basic/document.hpp>
+#include <bsoncxx/builder/basic/kvp.hpp>
 #include <bsoncxx/json.hpp>
+#include <bsoncxx/stdx/make_unique.hpp>
+
+#include <mongocxx/exception/operation_exception.hpp>
+#include <mongocxx/uri.hpp>
+
+using bsoncxx::builder::basic::kvp;
+using bsoncxx::builder::basic::make_document;
+using bsoncxx::builder::stream::finalize;
 
 namespace ndn {
 namespace gitsync {
@@ -12,43 +24,51 @@ Storage::Storage(const std::string &db /*= "gitsync"*/,
   : m_db(db)
   , m_collection(collection)
 {
-  // TODO: Init hash if not already exists
-  
+  // Create a unique index on hash on startup. The index is created if an index 
+  //  of the same specification does not already exist
+  mongocxx::options::index index_options{};
+  index_options.unique(true);
+  conn[m_db][m_collection].create_index(make_document(kvp("hash", 1)), index_options);
 
-  verbose("Storage initialized\n");
+  verbose("Unique index initialized\n");
 }
 
 bool
-Storage::put(const std::string &hash, uint8_t *bytes, size_t len)
+Storage::put(const std::string &hash, uint8_t *data, size_t len)
 {
-  bsoncxx::builder::stream::document document{};
-  bsoncxx::types::b_binary obj { bsoncxx::binary_sub_type::k_binary, uint32_t(len), bytes };
-  document << "hash" << hash << "data" << obj;
+  try {
+    bsoncxx::builder::stream::document document{};
+    bsoncxx::types::b_binary obj { bsoncxx::binary_sub_type::k_binary, uint32_t(len), data };
+    document << "hash" << hash << "data" << obj;// << "len" << len;
+    conn[m_db][m_collection].insert_one(document.view());
+  } catch (const mongocxx::operation_exception& e) {
+    fprintf(stderr, "%s\n", e.what());
+    return false;
+  }
 
-  auto connection = conn[m_db][m_collection];
-  connection.insert_one(document.view());
-
-  // TODO: Should fail if hash already exists
-
-  verbose("Storage::put()\n");
+  verbose("Storage::put() len: %d\n", len);
   return true;
 }
 
 uint8_t*
 Storage::get(const std::string &hash, size_t *len)
 {
-  auto connection = conn[m_db][m_collection];
+  bsoncxx::builder::stream::document document{};
   bsoncxx::stdx::optional<bsoncxx::document::value> maybe_result =
-    connection.find_one({});
+    conn[m_db][m_collection].find_one(document << "hash" << hash << finalize);
   
   if (!maybe_result) {
-    verbose("Storage::get() not found\n");
+    fprintf(stderr, "Not found\n");
     return nullptr;
   }
 
+  auto obj = maybe_result->view()["data"].get_binary();
+  void *data = malloc(obj.size * sizeof(uint8_t));
+  memcpy(data, obj.bytes, obj.size);
+  *len = obj.size;
 
+  return (uint8_t*)data;
 }
-
 
 
 } // namespace gitsync
