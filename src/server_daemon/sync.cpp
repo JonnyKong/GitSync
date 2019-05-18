@@ -68,7 +68,7 @@ Sync::decodeVector(const std::string& vector_str)
 {
   int start = 0;
   VersionVector vector;
-  for (int i = 0; i < vector_str.size(); ++i) {
+  for (size_t i = 0; i < vector_str.size(); ++i) {
     if (vector_str[i] == '_') {
       std::string s = vector_str.substr(start, i - start);
       size_t sep = s.find("-");

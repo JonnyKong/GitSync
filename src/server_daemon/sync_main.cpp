@@ -1,4 +1,4 @@
-// For sync testing: Periodically publish in one branch of a  repo
+// For sync testing: Periodically publish in one branch of a repo
 #include <iostream>
 #include <thread>
 
