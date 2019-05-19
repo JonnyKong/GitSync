@@ -42,7 +42,7 @@ Storage::put(const std::string &hash, uint8_t *data, size_t len)
     document << "hash" << hash << "data" << obj;// << "len" << len;
     conn[m_db][m_collection].insert_one(document.view());
   } catch (const mongocxx::operation_exception& e) {
-    fprintf(stderr, "%s\n", e.what());
+    fprintf(stderr, "ndn::gitsync::Storage: %s\n", e.what());
     return false;
   }
 
@@ -58,7 +58,7 @@ Storage::get(const std::string &hash, size_t *len)
     conn[m_db][m_collection].find_one(document << "hash" << hash << finalize);
   
   if (!maybe_result) {
-    fprintf(stderr, "Not found\n");
+    fprintf(stderr, "ndn::gitsync::Storage: Not found\n");
     return nullptr;
   }
 

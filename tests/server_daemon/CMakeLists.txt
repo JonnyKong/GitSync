@@ -14,3 +14,6 @@ target_link_libraries(storage_test
 
 add_test(NAME testInsertion             COMMAND storage_test testInsertion)
 add_test(NAME testDuplicateInsertion    COMMAND storage_test testDuplicateInsertion)
+add_test(NAME testValidRemoval          COMMAND storage_test testValidRemoval)
+add_test(NAME testInvalidRemoval        COMMAND storage_test testInvalidRemoval)
+add_test(NAME testObjectIntegrity       COMMAND storage_test testObjectIntegrity)
