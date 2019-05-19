@@ -1,5 +1,3 @@
-#include <iostream>
-
 // For Storage testing
 #include <iostream>
 #include <cstring>
@@ -79,7 +77,7 @@ int testInvalidRemoval()
 }
 
 // Should return the same data content
-int testObjectIntegrity() 
+int testGetValidObject() 
 {
   bool success;
   Storage s;
@@ -93,6 +91,24 @@ int testObjectIntegrity()
   else
     success = false;
   free(ret);
+  return success ? 0 : 1;
+}
+
+// Should fail if read non-existent object
+int testGetInvalidObject()
+{
+  bool success;
+  Storage s;
+  s.remove(hash);
+
+  size_t len;
+  uint8_t *ret = s.get(hash, &len);
+  
+  if (ret == nullptr && len == 0)
+    success = true;
+  else
+    success = false;
+
   return success ? 0 : 1;
 }
 
@@ -117,9 +133,12 @@ int main(int argc, char **argv) {
   else if (strcmp(argv[1], "testInvalidRemoval") == 0)
     return ndn::gitsync::testInvalidRemoval();
   
-  else if (strcmp(argv[1], "testObjectIntegrity") == 0)
-    return ndn::gitsync::testObjectIntegrity();
+  else if (strcmp(argv[1], "testGetValidObject") == 0)
+    return ndn::gitsync::testGetValidObject();
   
+  else if (strcmp(argv[1], "testGetInvalidObject") == 0)
+    return ndn::gitsync::testGetInvalidObject();
+
   else
     return 0;
 }

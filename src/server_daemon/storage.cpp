@@ -59,6 +59,7 @@ Storage::get(const std::string &hash, size_t *len)
   
   if (!maybe_result) {
     fprintf(stderr, "ndn::gitsync::Storage: Not found\n");
+    *len = 0;
     return nullptr;
   }
 
