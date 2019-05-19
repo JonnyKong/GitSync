@@ -26,4 +26,4 @@ find_package(Boost COMPONENTS system filesystem random REQUIRED)
 
 
 add_subdirectory(src)
-# add_subdirectory(test)
+add_subdirectory(tests)

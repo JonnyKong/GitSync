@@ -1,9 +1,9 @@
 // Persistent storage with MongoDB
 // Each document in the database have the following JSON format:
-//  { 
-//    "_id" :   ObjectId("5cdf7467eaa8e044472b2982"), 
+//  {
+//    "_id" :   ObjectId("5cdf7467eaa8e044472b2982"),
 //    "hash":   cf23df2207d99a74fbe169e3eba035e633b65d94
-//    "data" :  BinData(0,"+hEoM/oRKDP6ESgz+hEoM/oRKDP6ESgz+hEoM/oRKDM=") 
+//    "data" :  BinData(0,"+hEoM/oRKDP6ESgz+hEoM/oRKDP6ESgz+hEoM/oRKDM=")
 //    "len":    32
 //  }
 
@@ -26,12 +26,12 @@ namespace gitsync {
 class Storage {
 public:
   // Create an index on hash on startup, if not already exists
-  Storage(const std::string &db = "gitsync", 
+  Storage(const std::string &db = "gitsync",
           const std::string &collection = "objects");
 
   // Write content to database by hash value, return false if document already
   //  exists.
-  // Callee responsible for memory allocation & free
+  // Callee responsible for memory allocation & free.
   bool
   put(const std::string &hash, uint8_t *bytes, size_t len);
 
@@ -39,6 +39,10 @@ public:
   // Caller is responsible for memory allocation, callee responsible for free.
   uint8_t*
   get(const std::string &hash, size_t *len);
+
+  // Remove content from database by hash value, return true if success. 
+  bool
+  remove(const std::string &hash);
 
 private:
   const std::string m_db;

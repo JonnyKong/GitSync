@@ -70,6 +70,19 @@ Storage::get(const std::string &hash, size_t *len)
   return (uint8_t*)data;
 }
 
+bool
+Storage::remove(const std::string &hash)
+{
+  bsoncxx::builder::stream::document document{};
+  bsoncxx::stdx::optional<mongocxx::result::delete_result> result =
+    conn[m_db][m_collection].delete_one(document << "hash" << hash << finalize);
+  
+  if (result)
+    return true;
+  else
+    return false;
+}
+
 
 } // namespace gitsync
 } // namespace ndn
