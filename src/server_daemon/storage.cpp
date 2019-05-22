@@ -72,6 +72,16 @@ Storage::get(const std::string &hash, size_t *len)
 }
 
 bool
+Storage::exists(const std::string &hash)
+{
+  bsoncxx::builder::stream::document document{};
+  bsoncxx::stdx::optional<bsoncxx::document::value> maybe_result =
+    conn[m_db][m_collection].find_one(document << "hash" << hash << finalize);
+  
+  return maybe_result ? true : false;
+}
+
+bool
 Storage::remove(const std::string &hash)
 {
   bsoncxx::builder::stream::document document{};

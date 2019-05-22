@@ -8,11 +8,11 @@ namespace ndn {
 namespace gitsync {
 
 static uint8_t data[] = {
-    0xFA, 0x11, 0x28, 0x33, 0xFA, 0x11, 0x28, 0x33,
-    0xFA, 0x11, 0x28, 0x33, 0xFA, 0x11, 0x28, 0x33,
-    0xFA, 0x11, 0x28, 0x33, 0xFA, 0x11, 0x28, 0x33,
-    0xFA, 0x11, 0x28, 0x33, 0xFA, 0x11, 0x28, 0x33
-  };
+  0xFA, 0x11, 0x28, 0x33, 0xFA, 0x11, 0x28, 0x33,
+  0xFA, 0x11, 0x28, 0x33, 0xFA, 0x11, 0x28, 0x33,
+  0xFA, 0x11, 0x28, 0x33, 0xFA, 0x11, 0x28, 0x33,
+  0xFA, 0x11, 0x28, 0x33, 0xFA, 0x11, 0x28, 0x33
+};
 static std::string hash = "cf23df2207d99a74fbe169e3eba035e633b65d94";
 
 // Should success if no existing entry with same hash value
@@ -112,6 +112,38 @@ int testGetInvalidObject()
   return success ? 0 : 1;
 }
 
+// Should return true for existing documents
+int testExists()
+{
+  bool success;
+  Storage s;
+  s.put(hash, data, sizeof(data));
+
+  bool ret = s.exists(hash);
+  if (ret == true)
+    success = true;
+  else
+    success = false;
+  
+  return success ? 0 : 1;
+}
+
+// Should return false for non-existing documents
+int testNotExists()
+{
+  bool success;
+  Storage s;
+  s.remove(hash);
+
+  bool ret = s.exists(hash);
+  if (ret == false)
+    success = true;
+  else
+    success = false;
+  
+  return success ? 0 : 1;
+}
+
 } // namespace gitsync
 } // namespace ndn
 
@@ -138,6 +170,12 @@ int main(int argc, char **argv) {
   
   else if (strcmp(argv[1], "testGetInvalidObject") == 0)
     return ndn::gitsync::testGetInvalidObject();
+  
+  else if (strcmp(argv[1], "testExists") == 0)
+    return ndn::gitsync::testExists();
+
+  else if (strcmp(argv[1], "testNotExists") == 0)
+    return ndn::gitsync::testNotExists();
 
   else
     return 0;

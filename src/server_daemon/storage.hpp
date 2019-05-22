@@ -40,6 +40,10 @@ public:
   uint8_t*
   get(const std::string &hash, size_t *len);
 
+  // Return whether a hash already existed in the database;
+  bool
+  exists(const std::string &hash);
+
   // Remove content from database by hash value, return true if success. 
   bool
   remove(const std::string &hash);
