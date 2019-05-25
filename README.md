@@ -8,6 +8,8 @@ Git over NDN
 * [NFD](https://github.com/named-data/NFD) - Named Data Networking Forwarding Daemon
 * [MongoDB](https://www.mongodb.com) - The MongoDB Database
 * [mongocxx](http://mongocxx.org) - MongoDB C++ Driver
+* [zlib 1.2.11](https://zlib.net) - Compression Library
+* [PyMongo](https://api.mongodb.com/python/current/) - Python MongoDB API (For unit testing)
 
 ### Build & Test with CMake
 

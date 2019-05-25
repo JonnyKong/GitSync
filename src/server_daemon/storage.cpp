@@ -19,12 +19,12 @@ using bsoncxx::builder::stream::finalize;
 namespace ndn {
 namespace gitsync {
 
-Storage::Storage(const std::string &db /*= "gitsync"*/, 
+Storage::Storage(const std::string &db /*= "gitsync"*/,
                  const std::string &collection /*= "objects"*/)
   : m_db(db)
   , m_collection(collection)
 {
-  // Create a unique index on hash on startup. The index is created if an index 
+  // Create a unique index on hash on startup. The index is created if an index
   //  of the same specification does not already exist
   mongocxx::options::index index_options{};
   index_options.unique(true);
@@ -34,7 +34,7 @@ Storage::Storage(const std::string &db /*= "gitsync"*/,
 }
 
 bool
-Storage::put(const std::string &hash, uint8_t *data, size_t len)
+Storage::put(const std::string &hash, const uint8_t *data, size_t len)
 {
   try {
     bsoncxx::builder::stream::document document{};
@@ -56,7 +56,7 @@ Storage::get(const std::string &hash, size_t *len)
   bsoncxx::builder::stream::document document{};
   bsoncxx::stdx::optional<bsoncxx::document::value> maybe_result =
     conn[m_db][m_collection].find_one(document << "hash" << hash << finalize);
-  
+
   if (!maybe_result) {
     fprintf(stderr, "ndn::gitsync::Storage: Not found\n");
     *len = 0;
@@ -77,7 +77,7 @@ Storage::exists(const std::string &hash)
   bsoncxx::builder::stream::document document{};
   bsoncxx::stdx::optional<bsoncxx::document::value> maybe_result =
     conn[m_db][m_collection].find_one(document << "hash" << hash << finalize);
-  
+
   return maybe_result ? true : false;
 }
 
@@ -87,7 +87,7 @@ Storage::remove(const std::string &hash)
   bsoncxx::builder::stream::document document{};
   bsoncxx::stdx::optional<mongocxx::result::delete_result> result =
     conn[m_db][m_collection].delete_one(document << "hash" << hash << finalize);
-  
+
   if (result)
     return true;
   else

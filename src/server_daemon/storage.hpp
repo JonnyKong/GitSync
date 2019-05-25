@@ -4,7 +4,6 @@
 //    "_id" :   ObjectId("5cdf7467eaa8e044472b2982"),
 //    "hash":   cf23df2207d99a74fbe169e3eba035e633b65d94
 //    "data" :  BinData(0,"+hEoM/oRKDP6ESgz+hEoM/oRKDP6ESgz+hEoM/oRKDM=")
-//    "len":    32
 //  }
 
 // Run "brew install mongodb" to install on macOS
@@ -33,18 +32,18 @@ public:
   //  exists.
   // Callee responsible for memory allocation & free.
   bool
-  put(const std::string &hash, uint8_t *bytes, size_t len);
+  put(const std::string &hash, const uint8_t *bytes, size_t len);
 
   // Read content from database by hash value, return nullptr on failure.
   // Caller is responsible for memory allocation, callee responsible for free.
   uint8_t*
   get(const std::string &hash, size_t *len);
 
-  // Return whether a hash already existed in the database;
+  // Return whether a hash already existed in the database.
   bool
   exists(const std::string &hash);
 
-  // Remove content from database by hash value, return true if success. 
+  // Remove content from database by hash value, return true if success.
   bool
   remove(const std::string &hash);
 
