@@ -2,7 +2,12 @@ include_directories(${NDN_CXX_INCLUDE_DIRS}
                     ${MONGO_CXX_INCLUDE_DIRS}
                     ${BSON_CXX_INCLUDE_DIRS})
 
-add_library(server_daemon_lib sync.cpp object_fetcher.cpp storage.cpp)
+add_library(server_daemon_lib
+            sync.cpp
+            storage.cpp
+            object_fetcher.cpp
+            decode.cpp)
+
 add_executable(server_daemon server_daemon.cpp)
 target_link_libraries(server_daemon
                       server_daemon_lib

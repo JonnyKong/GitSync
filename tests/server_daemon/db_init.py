@@ -9,25 +9,29 @@ import sys
 from pymongo import MongoClient
 
 def path_from_hash(hash_name):
-    return os.path.join(".git/objects", hash_name[:2], hash_name[2:])
+    return os.path.join("git_for_test/objects", hash_name[:2], hash_name[2:])
 
 
 def traverse(hash_name: str, expect_type: str = ""):
     print("GO>>", hash_name, expect_type)
+    # Init DB
+    client = MongoClient('mongodb://localhost:27017/')
+    db = client['gitsync']
+    collection = db['objects_test_1']
+    collection.create_index('hash', unique=True)
+
     with open(path_from_hash(hash_name), "rb") as f:
         data = f.read()
-        
         # Add to DB
-        client = MongoClient('mongodb://localhost:27017/')
-        db = client['gitsync']
-        collection = db['objects_test_1']
-
         obj = {
             "hash": hash_name,
             "data": data
         }
-        ret = collection.insert_one(obj)
-        print("MongoDB>> %s inserted" % (hash_name))
+        try:
+            ret = collection.insert_one(obj)
+            print("MongoDB>> %s inserted" % (hash_name))
+        except:
+            pass
 
         # decompress + header
         data = zlib.decompress(data)
@@ -83,6 +87,10 @@ def main():
     if len(sys.argv) != 2:
         print("Usage:", sys.argv[0], "<hash-name>")
     else:
+        client = MongoClient('mongodb://localhost:27017/')
+        db = client['gitsync']
+        collection = db['objects_test_2']
+        collection.drop()
         traverse(sys.argv[1])
 
 

@@ -1,6 +1,6 @@
 // Simplified version of vectorsync
-
 #pragma once
+
 #include <iostream>
 #include <boost/random.hpp>
 

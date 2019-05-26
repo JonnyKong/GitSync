@@ -21,6 +21,7 @@ INCLUDE(FindPkgConfig)
 pkg_check_modules(NDN_CXX libndn-cxx)               # ndn-cxx
 pkg_check_modules(MONGO_CXX REQUIRED libmongocxx)   # mongocxx
 pkg_check_modules(BSON_CXX REQUIRED libbsoncxx)     # mongocxx
+pkg_check_modules(ZLIB_CXX REQUIRED zlib)           # zlib
 
 find_package(Boost COMPONENTS system filesystem random REQUIRED)
 

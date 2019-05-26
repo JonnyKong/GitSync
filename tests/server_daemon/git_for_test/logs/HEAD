@@ -1,0 +1,20 @@
+0000000000000000000000000000000000000000 36c952396ef6d4dd145e03cb4263a799909fa03e JonnyKong <jonnykong1996@gmail.com> 1557524346 -0700	clone: from https://github.com/JonnyKong/GitSync.git
+36c952396ef6d4dd145e03cb4263a799909fa03e edfd4550b5a1b3d58f50a1da07682b2a39459bd2 JonnyKong <jonnykong1996@gmail.com> 1557524722 -0700	commit: Initial update
+edfd4550b5a1b3d58f50a1da07682b2a39459bd2 f13b12e30ead1104e06be3df24a50df9cbe32849 JonnyKong <jonnykong1996@gmail.com> 1557539607 -0700	commit: Add CMakeLists.txt
+f13b12e30ead1104e06be3df24a50df9cbe32849 84b553e7b345923c15603d8187fc6b036a1230ce JonnyKong <jonnykong1996@gmail.com> 1557540171 -0700	commit: Init sync
+84b553e7b345923c15603d8187fc6b036a1230ce 67f50c816f9586b0b55e63b788563cfd4d5f1963 JonnyKong <jonnykong1996@gmail.com> 1557560864 -0700	commit: Add skeleton code for sync
+67f50c816f9586b0b55e63b788563cfd4d5f1963 0836e297fe17606d5b4e509834b7a30a3a801a19 JonnyKong <jonnykong1996@gmail.com> 1557616085 -0700	commit: CMake fails
+0836e297fe17606d5b4e509834b7a30a3a801a19 0836e297fe17606d5b4e509834b7a30a3a801a19 JonnyKong <jonnykong1996@gmail.com> 1557619580 -0700	reset: moving to HEAD
+0836e297fe17606d5b4e509834b7a30a3a801a19 6a4102d259563b8800ed87250f07e6ab29821449 JonnyKong <jonnykong1996@gmail.com> 1557619582 -0700	pull: Fast-forward
+6a4102d259563b8800ed87250f07e6ab29821449 13d8e56d39bcba415b0a7d4c0e5c450c4b3daf9a JonnyKong <jonnykong1996@gmail.com> 1557632954 -0700	commit: Add header
+13d8e56d39bcba415b0a7d4c0e5c450c4b3daf9a edd0252cbc4fbf14840cbed327be73cb9d8ca5b9 JonnyKong <jonnykong1996@gmail.com> 1557634747 -0700	commit: Using ndn-cxx@0.6.5
+edd0252cbc4fbf14840cbed327be73cb9d8ca5b9 7829c54671932d893810e36e10586f104e85aeae JonnyKong <jonnykong1996@gmail.com> 1557642424 -0700	commit: Complete sync
+7829c54671932d893810e36e10586f104e85aeae 8789fb6156ddee218847c78346be3c660f593906 JonnyKong <jonnykong1996@gmail.com> 1558152659 -0700	commit: Storage: Initial commit
+8789fb6156ddee218847c78346be3c660f593906 fcbc03c320d6c7ee77d4b40c4657f6fe219340bf JonnyKong <jonnykong1996@gmail.com> 1558221267 -0700	commit: Added skeleton code for unit tests
+fcbc03c320d6c7ee77d4b40c4657f6fe219340bf 9edf51e42bfe7e8625d716c5800655d980ba3c99 JonnyKong <jonnykong1996@gmail.com> 1558228840 -0700	commit: Unit tests: Add skeleton code
+9edf51e42bfe7e8625d716c5800655d980ba3c99 c2941702f8a7315e64310d4e93c370f58bd78425 JonnyKong <jonnykong1996@gmail.com> 1558235575 -0700	commit: Tests: Add unit tests for Storage
+c2941702f8a7315e64310d4e93c370f58bd78425 0c2144b6962b7908c34c6a0d7a45f752f2de9993 JonnyKong <jonnykong1996@gmail.com> 1558235959 -0700	commit: Tests: Add unit tests for Storage
+0c2144b6962b7908c34c6a0d7a45f752f2de9993 b2ed5519ba9255ab69c7722ab98074cb0a570d0e JonnyKong <jonnykong1996@gmail.com> 1558236770 -0700	commit: README: Update dependencies
+b2ed5519ba9255ab69c7722ab98074cb0a570d0e 18b5839c2fb2233f2ba2b343fd3690e0c6e8c493 JonnyKong <jonnykong1996@gmail.com> 1558562509 -0700	commit: Storage: Add exists()
+18b5839c2fb2233f2ba2b343fd3690e0c6e8c493 59d332a7826839aeceae8ec1f2937297cc1c6972 JonnyKong <jonnykong1996@gmail.com> 1558814968 -0700	pull: Fast-forward
+59d332a7826839aeceae8ec1f2937297cc1c6972 e8932bad31b14c89bb34dd526d844a24a21c9f54 JonnyKong <jonnykong1996@gmail.com> 1558827829 -0700	commit: ObjectFetcher: Initial upload
