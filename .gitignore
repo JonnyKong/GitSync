@@ -34,3 +34,9 @@
 .vscode/
 .DS_Store
 build/*
+
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+
