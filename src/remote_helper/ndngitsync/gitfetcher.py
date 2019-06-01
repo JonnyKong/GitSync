@@ -154,7 +154,7 @@ class GitFetcher:
             self.finish_event.set()
 
     def traverse_commit(self, content: bytes):
-        event_loop = asyncio.get_event_loop()
+        # event_loop = asyncio.get_event_loop()
         lines = content.decode("utf-8").split("\n")
         for ln in lines:
             if not ln.startswith("tree") and not ln.startswith("parent"):
@@ -165,7 +165,7 @@ class GitFetcher:
             self.fetch(hash_name, expect_type)
 
     def traverse_tree(self, content: bytes):
-        event_loop = asyncio.get_event_loop()
+        # event_loop = asyncio.get_event_loop()
         size = len(content)
         pos = 0
         while pos < size:
