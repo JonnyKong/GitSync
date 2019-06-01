@@ -23,7 +23,9 @@ class FileStorage(IStorage):
         return os.path.join(self.path, "objects", hash_name[:2], hash_name[2:])
 
     def put(self, hash_name: str, data: bytes):
-        with open(self.path_from_hash(hash_name), "wb") as f:
+        file_path = self.path_from_hash(hash_name)
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        with open(file_path, "wb") as f:
             f.write(data)
 
     def get(self, hash_name: str) -> bytes:
@@ -40,4 +42,3 @@ class FileStorage(IStorage):
             return True
         except OSError:
             return False
-

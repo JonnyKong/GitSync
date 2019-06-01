@@ -8,7 +8,8 @@ import hashlib
 import asyncio
 from pyndn import Face, Interest, Data, NetworkNack, Name
 from pyndn.security import KeyChain
-from ndngitsync.gitfetcher import path_from_hash
+from ndngitsync.gitfetcher import GitProducer
+from ndngitsync.storage import FileStorage
 
 
 class Server:
@@ -19,28 +20,15 @@ class Server:
         self.face = Face()
         keychain = KeyChain()
         self.face.setCommandSigningInfo(keychain, keychain.getDefaultCertificateName())
-        self.face.registerPrefix(Name("/git").append(repo).append("objects"),
-                                 self.on_objects_interest,
-                                 None)
+        self.storage = FileStorage("temprepo/.git")
+        self.producer = GitProducer(self.face,
+                                    Name("/git").append(repo).append("objects"),
+                                    self.storage)
 
     def run(self):
         while True:
             self.face.processEvents()
             time.sleep(0.01)
-
-    def on_objects_interest(self, _prefix, interest: Interest, face: Face, _filter_id, _filter):
-        hash_name = interest.name[3].toEscapedString()
-        #if interest.name[-1].isSequenceNumber():
-        #    interest.name[-1].toSequenceNumber()
-        print(interest.name.toUri())
-        file_path = os.path.join("temprepo/.git", path_from_hash(hash_name))
-        if os.path.exists(file_path):
-            data = Data(interest.name)
-            with open(file_path, "rb") as f:
-                data.content = f.read()
-            face.putData(data)
-        else:
-            print("Not exist!")
 
 
 def main():

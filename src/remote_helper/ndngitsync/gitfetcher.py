@@ -1,9 +1,10 @@
 from typing import Optional, Union
-import os
+import sys
 import zlib
 import hashlib
 import asyncio
 from pyndn import Face, Interest, Data, NetworkNack, Name
+from .storage import IStorage
 
 
 FETCHER_MAX_ATTEMPT_NUMBER = 3
@@ -75,19 +76,15 @@ async def fetch_object(face: Face, prefix: Name, semaphore: asyncio.Semaphore) -
     return data
 
 
-def path_from_hash(hash_name):
-    return os.path.join("objects", hash_name[:2], hash_name[2:])
-
-
 class GitFetcher:
-    def __init__(self, face: Face, prefix: Union[Name, str], path_prefix: str):
+    def __init__(self, face: Face, prefix: Union[Name, str], storage: IStorage):
         self.face = face
         self.semaphore = asyncio.Semaphore(FETCHER_MAX_INTEREST_IN_FLIGHT)
         self.requested = set()
         self.finished_cnt = 0
         self.finish_event = asyncio.Event()
         self.prefix = prefix
-        self.path = path_prefix
+        self.storage = storage
         self.success = True
         self.event_loop = asyncio.get_event_loop()
 
@@ -105,10 +102,8 @@ class GitFetcher:
             self.finish_event.set()
 
         # Get the data
-        file_path = os.path.join(self.path, path_from_hash(hash_name))
-        if os.path.exists(file_path):
-            with open(file_path, "rb") as f:
-                raw_data = f.read()
+        if self.storage.exists(hash_name):
+            raw_data = self.storage.get(hash_name)
             from_disk = True
         else:
             raw_data = await fetch_object(self.face, Name(self.prefix).append(hash_name), self.semaphore)
@@ -136,9 +131,7 @@ class GitFetcher:
             return
         # Write back if OK
         if not from_disk:
-            os.makedirs(os.path.dirname(file_path), exist_ok=True)
-            with open(file_path, "wb") as f:
-                f.write(raw_data)
+            self.storage.put(hash_name, raw_data)
         # Traverse data
         if content_type == "commit":
             if not from_disk:
@@ -154,7 +147,6 @@ class GitFetcher:
             self.finish_event.set()
 
     def traverse_commit(self, content: bytes):
-        # event_loop = asyncio.get_event_loop()
         lines = content.decode("utf-8").split("\n")
         for ln in lines:
             if not ln.startswith("tree") and not ln.startswith("parent"):
@@ -165,7 +157,6 @@ class GitFetcher:
             self.fetch(hash_name, expect_type)
 
     def traverse_tree(self, content: bytes):
-        # event_loop = asyncio.get_event_loop()
         size = len(content)
         pos = 0
         while pos < size:
@@ -184,3 +175,29 @@ class GitFetcher:
     async def wait_until_finish(self):
         await self.finish_event.wait()
         return self.success
+
+
+class GitProducer:
+    def __init__(self, face: Face, prefix: Union[Name, str], storage: IStorage):
+        self.face = face
+        self.prefix = prefix
+        self.storage = storage
+        self.register_id = face.registerPrefix(prefix, self.on_interest, self.on_register_failed)
+
+    def on_register_failed(self, prefix):
+        print("Prefix registration failed:", prefix, file=sys.stderr)
+
+    def on_interest(self, _prefix, interest, face, _filter_id, _filter):
+        hash_name = interest.name[3].toEscapedString()
+        # if interest.name[-1].isSequenceNumber():
+        #    interest.name[-1].toSequenceNumber()
+        print("OnInterest:", interest.name.toUri())
+        if self.storage.exists(hash_name):
+            data = Data(interest.name)
+            data.content = self.storage.get(hash_name)
+            face.putData(data)
+        else:
+            print("Not exist:", hash_name, file=sys.stderr)
+
+    def cancel(self):
+        self.face.removeRegisteredPrefix(self.register_id)

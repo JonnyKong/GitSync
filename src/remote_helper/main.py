@@ -4,6 +4,7 @@ import sys
 import os
 import asyncio
 from ndngitsync.gitfetcher import GitFetcher
+from ndngitsync.storage import FileStorage
 from pyndn import Face, Name
 
 
@@ -18,6 +19,7 @@ async def run(local_repo_path: str, repo_prefix: str):
     face = Face()
     event_loop = asyncio.get_event_loop()
     face_task = event_loop.create_task(face_loop())
+    storage = FileStorage(os.path.join(local_repo_path, ".git"))
 
     empty_cnt = 0
     while empty_cnt < 10 and running:
@@ -38,7 +40,7 @@ async def run(local_repo_path: str, repo_prefix: str):
             print("")
             sys.stdout.flush()
         elif cmd.startswith("fetch"):
-            fetcher = GitFetcher(face, Name(repo_prefix).append("objects"), os.path.join(local_repo_path, ".git"))
+            fetcher = GitFetcher(face, Name(repo_prefix).append("objects"), storage)
             while True:
                 # Fetch files
                 hash_name, ref_name = cmd.split()[1:]
