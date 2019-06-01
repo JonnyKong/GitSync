@@ -171,8 +171,6 @@ ObjectFetcher::traverseCommit(const uint8_t* bytes, size_t len)
     if (expect_type == "parent")
       expect_type = "commit";
 
-    if (hash_name.size() != 40)
-      printf("FAIL\n");
     assert(hash_name.size() == 40);
     fetchObject(hash_name);
   }
@@ -195,8 +193,6 @@ ObjectFetcher::traverseTree(const uint8_t* bytes, size_t len)
     else
       expect_type = "tree";
 
-    if (hash_hex.size() != 40)
-      printf("FAIL\n");
     assert(hash_hex.size() == 40);
     fetchObject(hash_hex);
     cursor = name_start + 21;
