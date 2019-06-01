@@ -36,6 +36,7 @@ class Sync:
         return int(datetime.utcnow().timestamp() * 1000000)
 
     def on_sync_interest(self, _prefix, interest: Interest, face, _filter_id, _filter):
+        print("on_sync_interest")
         async def update_state():
             nonlocal new_state
             async with self.lock:
@@ -44,7 +45,7 @@ class Sync:
                         self.state[branch] = timestamp
                         self.on_update(branch, timestamp)
 
-        raw_vec = interest.parameters.toBytes().decode("utf-8")
+        raw_vec = interest.applicationParameters.toBytes().decode("utf-8")
         new_state = self.decode(raw_vec)
         event_loop = asyncio.get_event_loop()
         event_loop.create_task(update_state())
@@ -55,15 +56,16 @@ class Sync:
     async def retx_sync_interest(self):
         while self.running:
             interest = Interest(Name(self.prefix))
-            interest.parameters = self.encode(self.state)
+            interest.applicationParameters = self.encode(self.state)
             interest.appendParametersDigestToName()
 
             # await fetch_data_packet(self.face, interest)
             self.face.expressInterest(interest, self.on_sync_data)
+            print("retx")
 
             timeout = uniform(SYNC_INTERVAL_MIN, SYNC_INTERVAL_MAX)
             try:
-                await asyncio.wait_for(self.sync_event, timeout)
+                await asyncio.wait_for(self.sync_event.wait(), timeout)
             except asyncio.TimeoutError:
                 pass
             self.sync_event.clear()
@@ -73,11 +75,14 @@ class Sync:
         self.running = True
         event_loop = asyncio.get_event_loop()
         event_loop.create_task(self.retx_sync_interest())
+        self.face.registerPrefix(self.prefix, self.on_sync_interest, None)
+
 
     def stop(self):
         self.running = False
 
     async def publish_data(self, branch: str, timestamp: Optional[int]):
+        print("publish_data")
         if timestamp is None:
             timestamp = self.timestamp()
         async with self.lock:
