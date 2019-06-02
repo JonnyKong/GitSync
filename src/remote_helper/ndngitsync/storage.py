@@ -3,17 +3,18 @@ import sys
 import pymongo
 from pymongo import MongoClient
 
+
 class IStorage:
-    def put(self, hash_name: str, data: bytes):
+    def put(self, key: str, data: bytes):
         raise NotImplementedError
 
-    def get(self, hash_name: str) -> bytes:
+    def get(self, key: str) -> bytes:
         raise NotImplementedError
 
-    def exists(self, hash_name: str) -> bool:
+    def exists(self, key: str) -> bool:
         raise NotImplementedError
 
-    def remove(self, hash_name: str) -> bool:
+    def remove(self, key: str) -> bool:
         raise NotImplementedError
 
 
@@ -45,6 +46,7 @@ class FileStorage(IStorage):
         except OSError:
             return False
 
+
 class DBStorage(IStorage):
     def __init__(self, db: str, collection: str):
         """
@@ -75,16 +77,16 @@ class DBStorage(IStorage):
         except pymongo.errors.DuplicateKeyError:
             c_collection.update_one({"key": key}, {"$set": {"value": value}})
     
-    def get(self, value: str) -> bytes:
+    def get(self, key: str) -> bytes:
         """
         Get document from MongoDB
         """
         client = MongoClient(self._uri)
         c_db = client[self._db]
         c_collection = c_db[self._collection]
-        ret = c_collection.find_one({"value": value})
+        ret = c_collection.find_one({"key": key})
         if ret:
-            return ret["value"]
+            return ret["key"]
         else:
             return None
 

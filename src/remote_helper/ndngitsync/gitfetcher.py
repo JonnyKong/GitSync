@@ -96,18 +96,19 @@ class GitFetcher:
         self.requested.add(hash_value)
         self.event_loop.create_task(self._do_fetch(hash_name, hash_value, expect_type))
 
+    def fail(self):
+        self.success = False
+        self.finish_event.set()
+
     async def _do_fetch(self, hash_name: str, hash_value: bytes, expect_type: str = ""):
         def fail():
-            self.success = False
-            self.finish_event.set()
+            self.fail()
 
         # Get the data
         if self.storage.exists(hash_name):
             raw_data = self.storage.get(hash_name)
-            from_disk = True
         else:
             raw_data = await fetch_object(self.face, Name(self.prefix).append(hash_name), self.semaphore)
-            from_disk = False
         if not isinstance(raw_data, bytes):
             fail()
             return
@@ -129,7 +130,8 @@ class GitFetcher:
         if sha1.digest() != hash_value:
             fail()
             return
-        # Write back if OK
+        # Write back if OK (double check existence for parallelism)
+        from_disk = self.storage.exists(hash_name)
         if not from_disk:
             self.storage.put(hash_name, raw_data)
         # Traverse data

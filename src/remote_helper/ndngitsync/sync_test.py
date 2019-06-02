@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import asyncio
 from sync import Sync
 from pyndn import Face, Interest, Data, NetworkNack, Name
