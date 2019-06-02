@@ -3,6 +3,7 @@ import asyncio
 from datetime import datetime
 from pyndn import Face, Interest, Data, NetworkNack, Name
 from random import uniform
+import sys
 
 
 SYNC_INTERVAL_MIN = 1.0
@@ -70,21 +71,23 @@ class Sync:
                 pass
             self.sync_event.clear()
 
-
     def run(self):
         self.running = True
         event_loop = asyncio.get_event_loop()
         event_loop.create_task(self.retx_sync_interest())
-        self.face.registerPrefix(self.prefix, self.on_sync_interest, None)
-
+        self.face.registerPrefix(self.prefix, self.on_sync_interest, self.on_register_failed)
 
     def stop(self):
         self.running = False
 
-    async def publish_data(self, branch: str, timestamp: Optional[int]):
+    def on_register_failed(self, prefix):
+        print("Prefix registration failed:", prefix, file=sys.stderr)
+
+    async def publish_data(self, branch: str, timestamp: Optional[int] = None):
         print("publish_data")
         if timestamp is None:
             timestamp = self.timestamp()
         async with self.lock:
             self.state[branch] = timestamp
         self.sync_event.set()
+        return timestamp
