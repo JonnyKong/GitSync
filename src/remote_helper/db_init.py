@@ -7,6 +7,15 @@ import zlib
 import hashlib
 import sys
 from pymongo import MongoClient
+from ndngitsync.storage import DBStorage
+from pyndn import Data, Name
+from ndngitsync.server import BranchInfo
+import pickle
+
+DATABASE_NAME = "gitsync"
+OBJECTS_COLL_NAME = "~objects"
+REPOS_COLL_NAME = "~repos"
+TEST_REPO_NAME = "testrepo"
 
 def path_from_hash(hash_name):
     return os.path.join("git_for_test/objects", hash_name[:2], hash_name[2:])
@@ -16,19 +25,19 @@ def traverse(hash_name: str, expect_type: str = ""):
     print("GO>>", hash_name, expect_type)
     # Init DB
     client = MongoClient('mongodb://localhost:27017/')
-    db = client['gitsync']
-    collection = db['objects_test_1']
-    collection.create_index('hash', unique=True)
+    db = client[DATABASE_NAME]
+    collection = db[OBJECTS_COLL_NAME]
+    collection.create_index('key', unique=True)
 
     with open(path_from_hash(hash_name), "rb") as f:
         data = f.read()
         # Add to DB
         obj = {
-            "hash": hash_name,
-            "data": data
+            "key": hash_name,
+            "value": data
         }
         try:
-            ret = collection.insert_one(obj)
+            collection.insert_one(obj)
             print("MongoDB>> %s inserted" % (hash_name))
         except:
             pass
@@ -82,16 +91,34 @@ def traverse_tree(content: bytes):
         traverse(hash_name.hex(), expect_type)
         pos = name_start + 21
 
+def init_repos(hash_name: str):
+    repos_db = DBStorage(DATABASE_NAME, REPOS_COLL_NAME)
+    repos_db.put(TEST_REPO_NAME, b"")
+
+    repo_db = DBStorage(DATABASE_NAME, TEST_REPO_NAME)
+    head_data = Data(Name("/git").append(TEST_REPO_NAME).append("refs").append("master").appendTimestamp(0))
+    head_data.content = hash_name.encode()
+    
+    data = BranchInfo("master")
+    data.custodian = "/localhost/gitdaemon"
+    data.key = ""
+    data.timestamp = 0
+    data.head = hash_name
+    data.head_data = head_data.wireEncode().toBytes()
+    repo_db.put("master", pickle.dumps(data))
+
+    
 
 def main():
     if len(sys.argv) != 2:
         print("Usage:", sys.argv[0], "<hash-name>")
-    else:
-        client = MongoClient('mongodb://localhost:27017/')
-        db = client['gitsync']
-        collection = db['objects_test_2']
-        collection.drop()
-        traverse(sys.argv[1])
+        return
+
+    # Init gitsync/~objects
+    traverse(sys.argv[1])
+    # Init gitsync/~repos
+    init_repos(sys.argv[1])
+
 
 
 if __name__ == "__main__":
