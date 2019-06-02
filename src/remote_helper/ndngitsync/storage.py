@@ -117,3 +117,10 @@ class DBStorage(IStorage):
         c_db = client[self._db]
         c_collection = c_db[self._collection]
         return (doc["key"] for doc in c_collection.find())
+
+# For testing
+if __name__ == "__main__":
+    s = DBStorage("gitsync", "objects")
+    hash_name = "cf23df2207d99a74fbe169e3eba035e633b65d94"
+    data = b'\x01\x02\x03\x04\x05'
+    s.put(hash_name, data)
