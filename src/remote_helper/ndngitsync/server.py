@@ -35,19 +35,19 @@ class Server:
             self.objects_db = objects_db
             self.repo_prefix = Name(GIT_PREFIX).append(repo_name)
             self.sync = Sync(face=face,
-                             prefix=self.repo_prefix.append("sync"),
+                             prefix=Name(self.repo_prefix).append("sync"),
                              on_update=self.on_sync_update)
             self.producer = GitProducer(face=face,
-                                        prefix=self.repo_prefix.append("objects"),
+                                        prefix=Name(self.repo_prefix).append("objects"),
                                         storage=objects_db)
             self.face = face
             self.branches = {}
             self.load_refs()
 
-            face.registerPrefix(self.repo_prefix.append("refs"),
+            face.registerPrefix(Name(self.repo_prefix).append("refs"),
                                 self.on_refs_interest,
                                 self.on_register_failed)
-            face.registerPrefix(self.repo_prefix.append("ref-list"),
+            face.registerPrefix(Name(self.repo_prefix).append("ref-list"),
                                 self.on_reflist_interest,
                                 self.on_register_failed)
 

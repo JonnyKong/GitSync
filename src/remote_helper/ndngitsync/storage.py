@@ -86,7 +86,7 @@ class DBStorage(IStorage):
         c_collection = c_db[self._collection]
         ret = c_collection.find_one({"key": key})
         if ret:
-            return ret["key"]
+            return ret["value"]
         else:
             return None
 

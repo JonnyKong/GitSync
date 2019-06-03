@@ -3,7 +3,7 @@
 import sys
 import os
 import asyncio
-from ndngitsync.gitfetcher import GitFetcher
+from ndngitsync.gitfetcher import GitFetcher, ReflistFetcher
 from ndngitsync.storage import FileStorage
 from pyndn import Face, Name
 
@@ -35,9 +35,10 @@ async def run(local_repo_path: str, repo_prefix: str):
             print("unsupported")
             sys.stdout.flush()
         elif cmd == "list" or cmd == "list for-push":
-            # TODO
-            print("6bc2f219de91083adea75a97fd423acaf9b854ca refs/heads/master")
-            print("")
+            fetcher = ReflistFetcher(face, Name(repo_prefix).append("ref-list"))
+            reflist = await fetcher.fetch()
+            print(reflist)
+            # print("")
             sys.stdout.flush()
         elif cmd.startswith("fetch"):
             fetcher = GitFetcher(face, Name(repo_prefix).append("objects"), storage)
@@ -75,7 +76,7 @@ def main():
         print("Usage:", sys.argv[0], "remote-name url", file=sys.stderr)
         # exit(-1)
         local_repo_path = os.path.join(os.getcwd(), "testrepo")
-        repo_prefix = "/git/temprepo"
+        repo_prefix = "/git/testrepo"
     else:
         local_repo_path = os.getcwd()
         repo_prefix = sys.argv[2]

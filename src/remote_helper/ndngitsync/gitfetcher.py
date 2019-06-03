@@ -203,3 +203,13 @@ class GitProducer:
 
     def cancel(self):
         self.face.removeRegisteredPrefix(self.register_id)
+
+class ReflistFetcher:
+    def __init__(self, face: Face, prefix: Union[Name, str]):
+        self.face = face
+        self.semaphore = asyncio.Semaphore(1)
+        self.prefix = prefix
+
+    async def fetch(self) -> Union[str, None]:
+        raw_data = await fetch_object(self.face, Name(self.prefix), self.semaphore)
+        return raw_data.decode("utf-8")
