@@ -40,9 +40,9 @@ async def run(local_repo_path: str, repo_prefix: str):
     producer = GitProducer(face, Name(repo_prefix).append("objects"), storage)
 
     empty_cnt = 0
-    while empty_cnt < 10 and running:
+    while empty_cnt < 2 and running:
         cmd = sys.stdin.readline().rstrip("\n\r")
-        print("<<", cmd, file=sys.stderr)
+        # print("<<", cmd, file=sys.stderr)
         if cmd == "capabilities":
             print("push")
             print("fetch")
@@ -77,7 +77,6 @@ async def run(local_repo_path: str, repo_prefix: str):
             print("")
             sys.stdout.flush()
         elif cmd.startswith("push"):
-            # TODO
             while True:
                 # Push commands
                 branch, commit, _ = parse_push(cmd, local_repo_path)
@@ -100,7 +99,7 @@ async def run(local_repo_path: str, repo_prefix: str):
                         print("PROCESSING push is not finished yet", interest.name, file=sys.stderr)
                         print("error refs/heads/{} PENDING".format(branch))
                 else:
-                    print("error: Interest got no response: ", interest.name, file=sys.stderr)
+                    print("ERROR Interest got no response: ", interest.name, file=sys.stderr)
                     print("error refs/heads/{} DISCONNECTED".format(branch))
 
                 # Read commands for next fetch
