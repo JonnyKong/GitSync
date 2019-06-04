@@ -89,7 +89,7 @@ async def run(local_repo_path: str, repo_prefix: str):
                 interest.mustBeFresh = True
                 data = await fetch_data_packet(face, interest)
                 if isinstance(data, Data):
-                    result = struct.unpack("i", data.content.toBytes())
+                    result = struct.unpack("i", data.content.toBytes())[0]
                     if result == 1:
                         print("OK push succeeded", interest.name, file=sys.stderr)
                         print("ok refs/heads/{}".format(branch))
