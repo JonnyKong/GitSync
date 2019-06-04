@@ -1,6 +1,6 @@
 from pyndn import Face, Name, Data, Interest
 from .sync import Sync
-from .gitfetcher import GitFetcher, GitProducer
+from .gitfetcher import GitFetcher, GitProducer, fetch_data_packet
 from .storage import DBStorage, IStorage
 import pickle
 import sys
@@ -17,7 +17,6 @@ REPOS_COLL_NAME = "~repos"
 PUSH_RESPONSE_PENDING = 0
 PUSH_RESPONSE_SUCCESS = 1
 PUSH_RESPONSE_FAILURE = 2
-
 
 class BranchInfo:
     def __init__(self, branch_name):
@@ -51,14 +50,39 @@ class Server:
             face.registerPrefix(Name(self.repo_prefix).append("ref-list"),
                                 self.on_reflist_interest,
                                 self.on_register_failed)
+            self.sync.run()
 
         def on_sync_update(self, branch: str, timestamp: int):
+            event_loop = asyncio.get_event_loop()
+            event_loop.create_task(self.sync_update(branch, timestamp))
+
+        async def sync_update(self, branch: str, timestamp: int):
+            commit = ""
+            data = Data()
+            def update_db():
+                nonlocal commit
+                # Fix the database
+                self.branches[branch].timestamp = timestamp
+                self.branches[branch].head = commit
+                self.branches[branch].head_data = data.wireEncode().toBytes()
+                self.repo_db.put(branch, pickle.dumps(self.branches[branch]))
+                self.branches[branch].head_data = b""
+
             if branch in self.branches:
                 branch_info = self.branches[branch]
                 if branch_info.timestamp < timestamp:
-                    # TODO: Update branch
-                    print("TODO: Update branch", branch, timestamp)
-                    branch_info.timestamp = timestamp
+                    interest = Interest(Name(self.repo_prefix).append("refs").appendTimestamp(timestamp))
+                    data = await fetch_data_packet(self.face, interest)
+                    if isinstance(data, Data):
+                        commit = pickle.dumps(data.content.wireEncode())
+                    else:
+                        print("error: Couldn't fetch refs")
+                        return
+                    
+                    fetcher = self.fetch(commit)
+                    await asyncio.wait_for(fetcher.wait_until_finish(), None)
+                    update_db()
+                    print("Update branch", branch, timestamp)
             else:
                 return  # TODO: fetch branch metainfo
 
