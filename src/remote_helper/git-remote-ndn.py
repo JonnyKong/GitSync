@@ -3,9 +3,24 @@
 import sys
 import os
 import asyncio
+import struct
 from ndngitsync.gitfetcher import GitFetcher, GitProducer, fetch_data_packet
 from ndngitsync.storage import FileStorage
 from pyndn import Face, Name, Interest, Data
+from pyndn.security import KeyChain
+from typing import Tuple
+
+
+def parse_push(cmd: str, local_repo_path: str) -> Tuple[str, str, bool]:
+    src, dst = cmd.split(" ")[1].split(":")
+    forced = src[0] == "+"
+    src = src.lstrip("+")
+    filename = os.path.join(local_repo_path, ".git", src)
+    with open(filename, "r") as f:
+        commit = f.readline().strip()
+    branch = dst.split("/")[-1]
+    print("PARSE:", branch, commit, forced, file=sys.stderr)
+    return branch, commit, forced
 
 
 async def run(local_repo_path: str, repo_prefix: str):
@@ -17,9 +32,12 @@ async def run(local_repo_path: str, repo_prefix: str):
 
     running = True
     face = Face()
+    keychain = KeyChain()
+    face.setCommandSigningInfo(keychain, keychain.getDefaultCertificateName())
     event_loop = asyncio.get_event_loop()
     face_task = event_loop.create_task(face_loop())
     storage = FileStorage(os.path.join(local_repo_path, ".git"))
+    producer = GitProducer(face, Name(repo_prefix).append("objects"), storage)
 
     empty_cnt = 0
     while empty_cnt < 10 and running:
@@ -59,20 +77,45 @@ async def run(local_repo_path: str, repo_prefix: str):
             print("")
             sys.stdout.flush()
         elif cmd.startswith("push"):
-            producer = GitProducer(face, Name(repo_prefix).append("objects"), storage)
             # TODO
-            while cmd.startswith("push"):
+            while True:
+                # Push commands
+                branch, commit, _ = parse_push(cmd, local_repo_path)
+                repo_name = repo_prefix.split("/")[-1]
+                interest = Interest(Name("/localhost/gitdaemon/push").append(repo_name).append(branch))
+                interest.applicationParameters = commit.encode("utf-8")
+                interest.appendParametersDigestToName()
+                interest.interestLifetimeMilliseconds = 20000
+                interest.mustBeFresh = True
+                data = await fetch_data_packet(face, interest)
+                if isinstance(data, Data):
+                    result = struct.unpack("i", data.content.toBytes())
+                    if result == 1:
+                        print("OK push succeeded", interest.name, file=sys.stderr)
+                        print("ok refs/heads/{}".format(branch))
+                    elif result == 2:
+                        print("ERROR push failed", interest.name, file=sys.stderr)
+                        print("error refs/heads/{} FAILED".format(branch))
+                    else:
+                        print("PROCESSING push is not finished yet", interest.name, file=sys.stderr)
+                        print("error refs/heads/{} PENDING".format(branch))
+                else:
+                    print("error: Interest got no response: ", interest.name, file=sys.stderr)
+                    print("error refs/heads/{} DISCONNECTED".format(branch))
+
+                # Read commands for next fetch
                 cmd = sys.stdin.readline().rstrip("\n\r")
-                print("<<push<<", cmd, file=sys.stderr)
-            print("ok refs/heads/master")
+                if not cmd.startswith("push"):
+                    break
+
             print("")
             sys.stdout.flush()
-            # pretend to push data
         elif cmd == "":
             empty_cnt += 1
         else:
             pass
 
+    producer.cancel()
     running = False
     await face_task
 

@@ -111,7 +111,7 @@ class Server:
             fetcher.fetch(commit, "commit")
             return fetcher
 
-        def push(self, branch, commit, timeout):
+        async def push(self, branch, commit, timeout, face, name):
             # TODO Check if new head is legal
             fetcher = self.fetch(commit)
             result = False
@@ -130,22 +130,29 @@ class Server:
                 head_data.content = commit.encode("utf-8")
                 # TODO Sign data
                 self.branches[branch].head_data = head_data.wireEncode().toBytes()
-                self.repo_db.put(branch, self.branches[branch])
+                self.repo_db.put(branch, pickle.dumps(self.branches[branch]))
                 self.branches[branch].head_data = b""
                 result = True
 
             event_loop = asyncio.get_event_loop()
+            response = -1
             try:
-                asyncio.wait_for(fetcher.wait_until_finish(), timeout)
+                await asyncio.wait_for(fetcher.wait_until_finish(), timeout)
             except asyncio.TimeoutError:
                 event_loop.create_task(checkout())
-                return PUSH_RESPONSE_PENDING
+                response = PUSH_RESPONSE_PENDING
 
-            asyncio.wait_for(checkout(), None)
-            if result:
-                return PUSH_RESPONSE_SUCCESS
-            else:
-                return PUSH_RESPONSE_FAILURE
+            if response != PUSH_RESPONSE_PENDING:
+                await asyncio.wait_for(checkout(), None)
+                if result:
+                    response = PUSH_RESPONSE_SUCCESS
+                else:
+                    response = PUSH_RESPONSE_FAILURE
+
+            logging.info("Push Result: %s", response)
+            data = Data(name)
+            data.content = struct.pack("i", response)
+            face.putData(data)
 
     def __init__(self, face: Face, cmd_prefix: str):
         self.running = True
@@ -169,18 +176,22 @@ class Server:
         logging.error("Prefix registration failed: %s", prefix)
 
     def on_push(self, _prefix, interest: Interest, face, _filter_id, _filter):
-        # TODO Length check for all
-        repo = interest.name[-3]
-        branch = interest.name[-2]
-        if repo not in self.repos:
-            return
-        commit = interest.applicationParameters.toBytes().decode("utf-8")
-        timeout = interest.interestLifetimeMilliseconds / 1000.0 / 2.0
-        result = self.repos[repo].push(branch, commit, timeout)
+        logging.info("OnPush: %s", interest.name.toUri())
 
-        data = Data(interest.name)
-        data.content = struct.pack("i", result)
-        face.putData(data)
+        # TODO Length check for all
+        repo = interest.name[-3].toEscapedString()
+        branch = interest.name[-2].toEscapedString()
+        if repo not in self.repos:
+            logging.info("Repo %s doesn't exist", repo)
+            result = PUSH_RESPONSE_FAILURE
+        else:
+            commit = interest.applicationParameters.toBytes().decode("utf-8")
+            timeout = interest.interestLifetimeMilliseconds / 1000.0 / 2.0
+
+            logging.info("Arguments %s %s %s %d", repo, branch, commit, timeout)
+
+            event_loop = asyncio.get_event_loop()
+            event_loop.create_task(self.repos[repo].push(branch, commit, timeout, face, interest.name))
 
     def stop(self):
         self.running = False
