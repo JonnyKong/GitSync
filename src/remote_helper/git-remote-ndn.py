@@ -79,9 +79,11 @@ async def run(local_repo_path: str, repo_prefix: str):
         elif cmd.startswith("push"):
             while True:
                 # Push commands
+                # TODO: DELETE ALL HARDCODED THINGS
+                # TODO: MAKE DATA AND INTEREST REAL
                 branch, commit, _ = parse_push(cmd, local_repo_path)
                 repo_name = repo_prefix.split("/")[-1]
-                interest = Interest(Name("/localhost/gitdaemon/push").append(repo_name).append(branch))
+                interest = Interest(Name("/zhaoning/push").append(repo_name).append(branch))
                 interest.applicationParameters = commit.encode("utf-8")
                 interest.appendParametersDigestToName()
                 interest.interestLifetimeMilliseconds = 20000

@@ -52,6 +52,8 @@ class Server:
                                 self.on_reflist_interest,
                                 self.on_register_failed)
 
+            self.sync.run()
+
         def on_sync_update(self, branch: str, timestamp: int):
             if branch in self.branches:
                 branch_info = self.branches[branch]

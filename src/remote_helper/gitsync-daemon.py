@@ -16,7 +16,7 @@ def main():
     face = Face()
     keychain = KeyChain()
     face.setCommandSigningInfo(keychain, keychain.getDefaultCertificateName())
-    server = Server(face, "/localhost/gitdaemon")
+    server = Server(face, "/xinyu")
 
     async def face_loop():
         nonlocal face, server

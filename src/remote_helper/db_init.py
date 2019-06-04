@@ -18,7 +18,7 @@ REPOS_COLL_NAME = "~repos"
 TEST_REPO_NAME = "temprepo"
 
 def path_from_hash(hash_name):
-    return os.path.join("temprepo-3-bak/.git/objects", hash_name[:2], hash_name[2:])
+    return os.path.join("temprepo-5-bak/.git/objects", hash_name[:2], hash_name[2:])
 
 
 def traverse(hash_name: str, expect_type: str = ""):
@@ -100,7 +100,7 @@ def init_repos(hash_name: str):
     head_data.content = hash_name.encode()
     
     data = BranchInfo("master")
-    data.custodian = "/localhost/gitdaemon"
+    data.custodian = "/zhaoning"
     data.key = ""
     data.timestamp = 0
     data.head = hash_name
