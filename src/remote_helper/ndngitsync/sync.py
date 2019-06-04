@@ -4,6 +4,7 @@ from datetime import datetime
 from pyndn import Face, Interest, Data, NetworkNack, Name
 from random import uniform
 import sys
+import logging
 
 
 SYNC_INTERVAL_MIN = 1.0
@@ -37,7 +38,7 @@ class Sync:
         return int(datetime.utcnow().timestamp() * 1000000)
 
     def on_sync_interest(self, _prefix, interest: Interest, face, _filter_id, _filter):
-        print("on_sync_interest")
+        logging.info("on_sync_interest")
         async def update_state():
             nonlocal new_state
             async with self.lock:
@@ -62,7 +63,7 @@ class Sync:
 
             # await fetch_data_packet(self.face, interest)
             self.face.expressInterest(interest, self.on_sync_data)
-            print("retx")
+            logging.info("retx")
 
             timeout = uniform(SYNC_INTERVAL_MIN, SYNC_INTERVAL_MAX)
             try:
@@ -81,10 +82,10 @@ class Sync:
         self.running = False
 
     def on_register_failed(self, prefix):
-        print("Prefix registration failed:", prefix, file=sys.stderr)
+        logging.error("Prefix registration failed: %s", prefix)
 
     async def publish_data(self, branch: str, timestamp: Optional[int] = None):
-        print("publish_data")
+        logging.info("publish_data")
         if timestamp is None:
             timestamp = self.timestamp()
         async with self.lock:

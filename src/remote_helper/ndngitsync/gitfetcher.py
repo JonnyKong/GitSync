@@ -3,6 +3,7 @@ import sys
 import zlib
 import hashlib
 import asyncio
+import logging
 from pyndn import Face, Interest, Data, NetworkNack, Name
 from .storage import IStorage
 
@@ -142,7 +143,7 @@ class GitFetcher:
             self.traverse_tree(content)
         else:
             if content_type != "blob":
-                print("Error: Unknown file type", content_type)
+                logging.error("Error: Unknown file type %s", content_type)
         # Finish event
         self.finished_cnt += 1
         if self.finished():
@@ -187,29 +188,19 @@ class GitProducer:
         self.register_id = face.registerPrefix(prefix, self.on_interest, self.on_register_failed)
 
     def on_register_failed(self, prefix):
-        print("Prefix registration failed:", prefix, file=sys.stderr)
+        logging.error("Prefix registration failed: %s", prefix)
 
     def on_interest(self, _prefix, interest, face, _filter_id, _filter):
         hash_name = interest.name[3].toEscapedString()
         # if interest.name[-1].isSequenceNumber():
         #    interest.name[-1].toSequenceNumber()
-        print("OnInterest:", interest.name.toUri())
+        logging.info("OnInterest: %s", interest.name.toUri())
         if self.storage.exists(hash_name):
             data = Data(interest.name)
             data.content = self.storage.get(hash_name)
             face.putData(data)
         else:
-            print("Not exist:", hash_name, file=sys.stderr)
+            logging.info("Not exist: %s", hash_name)
 
     def cancel(self):
         self.face.removeRegisteredPrefix(self.register_id)
-
-class ReflistFetcher:
-    def __init__(self, face: Face, prefix: Union[Name, str]):
-        self.face = face
-        self.semaphore = asyncio.Semaphore(1)
-        self.prefix = prefix
-
-    async def fetch(self) -> Union[str, None]:
-        raw_data = await fetch_object(self.face, Name(self.prefix), self.semaphore)
-        return raw_data.decode("utf-8")

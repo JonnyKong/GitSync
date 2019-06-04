@@ -3,9 +3,9 @@
 import sys
 import os
 import asyncio
-from ndngitsync.gitfetcher import GitFetcher, ReflistFetcher
+from ndngitsync.gitfetcher import GitFetcher, GitProducer, fetch_data_packet
 from ndngitsync.storage import FileStorage
-from pyndn import Face, Name
+from pyndn import Face, Name, Interest, Data
 
 
 async def run(local_repo_path: str, repo_prefix: str):
@@ -35,10 +35,15 @@ async def run(local_repo_path: str, repo_prefix: str):
             print("unsupported")
             sys.stdout.flush()
         elif cmd == "list" or cmd == "list for-push":
-            fetcher = ReflistFetcher(face, Name(repo_prefix).append("ref-list"))
-            reflist = await fetcher.fetch()
-            print(reflist)
-            # print("")
+            interest = Interest(Name(repo_prefix).append("ref-list"))
+            data = await fetch_data_packet(face, interest)
+            if isinstance(data, Data):
+                reflist = data.content.toBytes().decode("utf-8")
+                print(reflist)
+            else:
+                print("error: Couldn't connect to", repo_prefix, file=sys.stderr)
+                running = False
+                print("")
             sys.stdout.flush()
         elif cmd.startswith("fetch"):
             fetcher = GitFetcher(face, Name(repo_prefix).append("objects"), storage)
@@ -54,6 +59,7 @@ async def run(local_repo_path: str, repo_prefix: str):
             print("")
             sys.stdout.flush()
         elif cmd.startswith("push"):
+            producer = GitProducer(face, Name(repo_prefix).append("objects"), storage)
             # TODO
             while cmd.startswith("push"):
                 cmd = sys.stdin.readline().rstrip("\n\r")
@@ -76,7 +82,7 @@ def main():
         print("Usage:", sys.argv[0], "remote-name url", file=sys.stderr)
         # exit(-1)
         local_repo_path = os.path.join(os.getcwd(), "testrepo")
-        repo_prefix = "/git/testrepo"
+        repo_prefix = "/git/temprepo"
     else:
         local_repo_path = os.getcwd()
         repo_prefix = sys.argv[2]

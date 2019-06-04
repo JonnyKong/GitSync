@@ -15,10 +15,10 @@ import pickle
 DATABASE_NAME = "gitsync"
 OBJECTS_COLL_NAME = "~objects"
 REPOS_COLL_NAME = "~repos"
-TEST_REPO_NAME = "testrepo"
+TEST_REPO_NAME = "temprepo"
 
 def path_from_hash(hash_name):
-    return os.path.join("git_for_test/objects", hash_name[:2], hash_name[2:])
+    return os.path.join("temprepo-5-bak/.git/objects", hash_name[:2], hash_name[2:])
 
 
 def traverse(hash_name: str, expect_type: str = ""):

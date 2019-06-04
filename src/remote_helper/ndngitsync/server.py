@@ -6,6 +6,7 @@ import pickle
 import sys
 import asyncio
 import struct
+import logging
 
 
 DATABASE_NAME = "gitsync"
@@ -80,24 +81,30 @@ class Server:
             face.putData(data)
 
         def on_reflist_interest(self, _prefix, interest: Interest, face, _filter_id, _filter):
-            result = '\n'.join("{} refs/heads/{}".format(name, info.head)
+            result = '\n'.join("{} refs/heads/{}".format(info.head, name)
                                for name, info in self.branches.items())
             result = result + '\n'
+
+            print("On reflist -> return:", result)
+
             data = Data(interest.name)
             data.content = result.encode("utf-8")
             face.putData(data)
 
         def on_register_failed(self, prefix):
-            print("Prefix registration failed:", prefix, file=sys.stderr)
+            logging.error("Prefix registration failed: %s", prefix)
 
         def load_refs(self):
+            logging.info("Loading %s {", self.repo_prefix[-1])
             for branch in self.repo_db.keys():
                 raw_data = self.repo_db.get(branch)
                 self.branches[branch] = pickle.loads(raw_data)
                 # Drop the data packet from memory
                 self.branches[branch].head_data = b""
+                logging.info("  branch: %s head: %s", self.branches[branch].name, self.branches[branch].head)
             # Set Sync's initial state
             self.sync.state = {name: info.timestamp for name, info in self.branches.items()}
+            logging.info("}")
 
         def fetch(self, commit):
             fetcher = GitFetcher(self.face, self.repo_prefix.append("objects"), self.objects_db)
@@ -153,11 +160,13 @@ class Server:
         self.load_repos()
 
     def load_repos(self):
+        logging.info("Loading repos......")
         for repo in self.repos_db.keys():
             self.repos[repo] = self.Repo(self.objects_db, repo, self.face)
+        logging.info("All repos loaded.")
 
     def on_register_failed(self, prefix):
-        print("Prefix registration failed:", prefix, file=sys.stderr)
+        logging.error("Prefix registration failed: %s", prefix)
 
     def on_push(self, _prefix, interest: Interest, face, _filter_id, _filter):
         # TODO Length check for all

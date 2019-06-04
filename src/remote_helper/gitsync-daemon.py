@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 
 import asyncio
+import logging
 from ndngitsync.server import Server
 from pyndn import Face
 from pyndn.security import KeyChain
 
 
 def main():
+    logging.basicConfig(format='[%(asctime)s]%(levelname)s:%(message)s',
+                        datefmt='%Y-%m-%d %H:%M:%S',
+                        level=logging.INFO)
+
     event_loop = asyncio.get_event_loop()
     face = Face()
     keychain = KeyChain()
