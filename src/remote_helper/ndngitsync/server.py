@@ -52,8 +52,6 @@ class Server:
                                 self.on_register_failed)
             self.sync.run()
 
-            self.sync.run()
-
         def on_sync_update(self, branch: str, timestamp: int):
             event_loop = asyncio.get_event_loop()
             event_loop.create_task(self.sync_update(branch, timestamp))
@@ -73,10 +71,11 @@ class Server:
             if branch in self.branches:
                 branch_info = self.branches[branch]
                 if branch_info.timestamp < timestamp:
-                    interest = Interest(Name(self.repo_prefix).append("refs").appendTimestamp(timestamp))
+                    interest = Interest(Name(self.repo_prefix).append("refs").append(branch).appendTimestamp(timestamp))
+                    print("ON SYNC UPDATE", interest.name.toUri())
                     data = await fetch_data_packet(self.face, interest)
                     if isinstance(data, Data):
-                        commit = pickle.dumps(data.content.wireEncode())
+                        commit = data.content.toBytes().decode("utf-8")
                     else:
                         print("error: Couldn't fetch refs")
                         return
@@ -90,12 +89,13 @@ class Server:
 
         def on_refs_interest(self, _prefix, interest: Interest, face, _filter_id, _filter):
             name = interest.name
+            print("ON REFS INTEREST", name.toUri())
             if name[-1].isTimestamp:
                 timestamp = name[-1].toTimestamp()
                 name = name[:-1]
             else:
                 timestamp = None
-            branch = name[-1]
+            branch = name[-1].toEscapedString()
             if branch not in self.branches:
                 return
             if timestamp is not None and timestamp != self.branches[branch].timestamp:
@@ -133,7 +133,7 @@ class Server:
             logging.info("}")
 
         def fetch(self, commit):
-            fetcher = GitFetcher(self.face, self.repo_prefix.append("objects"), self.objects_db)
+            fetcher = GitFetcher(self.face, Name(self.repo_prefix).append("objects"), self.objects_db)
             fetcher.fetch(commit, "commit")
             return fetcher
 
@@ -145,6 +145,9 @@ class Server:
             async def checkout():
                 nonlocal fetcher, result
                 await fetcher.wait_until_finish()
+                if not fetcher.success:
+                    return
+
                 timestamp = await self.sync.publish_data(branch)
                 self.branches[branch].timestamp = timestamp
                 self.branches[branch].head = commit
@@ -210,6 +213,7 @@ class Server:
         if repo not in self.repos:
             logging.info("Repo %s doesn't exist", repo)
             result = PUSH_RESPONSE_FAILURE
+            # TODO: SEND BACK PACKETS
         else:
             commit = interest.applicationParameters.toBytes().decode("utf-8")
             timeout = interest.interestLifetimeMilliseconds / 1000.0 / 2.0
