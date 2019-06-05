@@ -62,6 +62,7 @@ class Server:
         async def sync_update(self, branch: str, timestamp: int):
             commit = ""
             data = Data()
+
             def update_db():
                 nonlocal commit
                 # Fix the database
@@ -74,6 +75,7 @@ class Server:
                 self.branches[branch].head_data = b""
 
             if branch in self.branches:
+                # Update existing branch
                 branch_info = self.branches[branch]
                 if branch_info.timestamp < timestamp:
                     interest = Interest(Name(self.repo_prefix).append("refs").append(branch).appendTimestamp(timestamp))
@@ -90,7 +92,17 @@ class Server:
                     update_db()
                     print("Update branch", branch, timestamp)
             else:
-                return  # TODO: fetch branch metainfo
+                # Fetch new branch
+                interest = Interest(Name(self.repo_prefix).append("branch-info").append(branch))
+                print("ON NEW BRANCH", interest.name.toUri())
+                data = await fetch_data_packet(self.face, interest)
+                if isinstance(data, Data):
+                    branchinfo = pickle.loads(data.content.toBytes())
+                else:
+                    print("error: Couldn't fetch branch-info")
+                    return
+                self.branches[branch] = branchinfo
+                await self.sync_update(branch, timestamp)
 
         def on_branchinfo_interest(self, _prefix, interest: Interest, face, _filter_id, _filter):
             name = interest.name
@@ -154,6 +166,18 @@ class Server:
             fetcher.fetch(commit, "commit")
             return fetcher
 
+        def create_branch(self, branch, custodian):
+            if branch in self.branches:
+                return False
+            branch_info = BranchInfo(branch)
+            branch_info.head = "?"
+            branch_info.timestamp = 0
+            branch_info.custodian = custodian
+            self.branches[branch] = branch_info
+            self.repo_db.put(branch, pickle.dumps(self.branches[branch]))
+            asyncio.create_task(self.sync.publish_data(branch, 0))
+            return True
+
         async def push(self, branch, commit, timeout, face, name):
             # TODO Check if new head is legal
             fetcher = self.fetch(commit)
@@ -165,6 +189,7 @@ class Server:
                 if not fetcher.success:
                     return
 
+                # TODO W-A-W conflict
                 timestamp = await self.sync.publish_data(branch)
                 self.branches[branch].timestamp = timestamp
                 self.branches[branch].head = commit
@@ -215,6 +240,8 @@ class Server:
 
         self.face.registerPrefix(self.cmd_prefix, None, self.on_register_failed)
         self.face.setInterestFilter(Name(self.cmd_prefix).append("push"), self.on_push)
+        self.face.setInterestFilter(Name(self.cmd_prefix).append("create-branch"), self.on_create_branch)
+        self.face.setInterestFilter(Name(self.cmd_prefix).append("track-repo"), self.on_track_repo)
         self.load_repos()
 
     def load_repos(self):
@@ -249,3 +276,33 @@ class Server:
 
     def stop(self):
         self.running = False
+
+    def on_create_branch(self, _prefix, interest: Interest, face, _filter_id, _filter):
+        logging.info("OnCreateBranch: %s", interest.name.toUri())
+        if len(interest.name) < 3:
+            return
+        repo = interest.name[-2].toEscapedString()
+        branch = interest.name[-1].toEscapedString()
+        if repo not in self.repos:
+            response = PUSH_RESPONSE_FAILURE
+        else:
+            result = self.repos[repo].create_branch(branch, self.cmd_prefix.toUri())
+            response = PUSH_RESPONSE_SUCCESS if result else PUSH_RESPONSE_FAILURE
+        data = Data(interest.name)
+        data.content = struct.pack("i", response)
+        face.putData(data)
+
+    def on_track_repo(self, _prefix, interest: Interest, face, _filter_id, _filter):
+        logging.info("OnTrackRepo: %s", interest.name.toUri())
+        if len(interest.name) < 2:
+            return
+        repo = interest.name[-1].toEscapedString()
+        if repo in self.repos:
+            response = PUSH_RESPONSE_FAILURE
+        else:
+            self.repos[repo] = self.Repo(self.objects_db, repo, self.face)
+            self.repos_db.put(repo, b"")
+            response = PUSH_RESPONSE_SUCCESS
+        data = Data(interest.name)
+        data.content = struct.pack("i", response)
+        face.putData(data)
