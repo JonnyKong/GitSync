@@ -191,9 +191,15 @@ class GitProducer:
         logging.error("Prefix registration failed: %s", prefix)
 
     def on_interest(self, _prefix, interest, face, _filter_id, _filter):
-        hash_name = interest.name[3].toEscapedString()
-        # if interest.name[-1].isSequenceNumber():
-        #    interest.name[-1].toSequenceNumber()
+        if len(interest.name) < 4:
+            return
+        if interest.name[-1].isSequenceNumber():
+            _ = interest.name[-1].toSequenceNumber()
+            hash_name = interest.name[-2].toEscapedString()
+        else:
+            hash_name = interest.name[-1].toEscapedString()
+
+        # TODO: Segmentation
         logging.info("OnInterest: %s", interest.name.toUri())
         if self.storage.exists(hash_name):
             data = Data(interest.name)

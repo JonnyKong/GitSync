@@ -50,6 +50,9 @@ class Server:
             face.registerPrefix(Name(self.repo_prefix).append("ref-list"),
                                 self.on_reflist_interest,
                                 self.on_register_failed)
+            face.registerPrefix(Name(self.repo_prefix).append("branch-info"),
+                                self.on_branchinfo_interest,
+                                self.on_register_failed)
             self.sync.run()
 
         def on_sync_update(self, branch: str, timestamp: int):
@@ -62,6 +65,8 @@ class Server:
             def update_db():
                 nonlocal commit
                 # Fix the database
+                if timestamp <= self.branches[branch].timestamp:
+                    return
                 self.branches[branch].timestamp = timestamp
                 self.branches[branch].head = commit
                 self.branches[branch].head_data = data.wireEncode().toBytes()
@@ -87,6 +92,16 @@ class Server:
             else:
                 return  # TODO: fetch branch metainfo
 
+        def on_branchinfo_interest(self, _prefix, interest: Interest, face, _filter_id, _filter):
+            name = interest.name
+            print("ON BRANCH INFO INTEREST", name.toUri())
+            branch = name[-1].toEscapedString()
+            if branch not in self.branches:
+                return
+            data = Data(interest.name)
+            data.content = pickle.dumps(self.branches[branch])
+            face.putData(data)
+
         def on_refs_interest(self, _prefix, interest: Interest, face, _filter_id, _filter):
             name = interest.name
             print("ON REFS INTEREST", name.toUri())
@@ -99,6 +114,8 @@ class Server:
             if branch not in self.branches:
                 return
             if timestamp is not None and timestamp != self.branches[branch].timestamp:
+                if timestamp > self.branches[branch].timestamp:
+                    self.on_sync_update(branch, timestamp)
                 return
 
             data = Data()
@@ -164,14 +181,19 @@ class Server:
                 result = True
 
             event_loop = asyncio.get_event_loop()
-            response = -1
-            try:
-                await asyncio.wait_for(fetcher.wait_until_finish(), timeout)
-            except asyncio.TimeoutError:
-                event_loop.create_task(checkout())
-                response = PUSH_RESPONSE_PENDING
+            response = None
 
-            if response != PUSH_RESPONSE_PENDING:
+            if branch not in self.branches:
+                response = PUSH_RESPONSE_FAILURE
+
+            if response is None:
+                try:
+                    await asyncio.wait_for(fetcher.wait_until_finish(), timeout)
+                except asyncio.TimeoutError:
+                    event_loop.create_task(checkout())
+                    response = PUSH_RESPONSE_PENDING
+
+            if response is None:
                 await asyncio.wait_for(checkout(), None)
                 if result:
                     response = PUSH_RESPONSE_SUCCESS
@@ -206,14 +228,16 @@ class Server:
 
     def on_push(self, _prefix, interest: Interest, face, _filter_id, _filter):
         logging.info("OnPush: %s", interest.name.toUri())
-
-        # TODO Length check for all
+        if len(interest.name) < 3:
+            return
         repo = interest.name[-3].toEscapedString()
         branch = interest.name[-2].toEscapedString()
         if repo not in self.repos:
             logging.info("Repo %s doesn't exist", repo)
-            result = PUSH_RESPONSE_FAILURE
-            # TODO: SEND BACK PACKETS
+            response = PUSH_RESPONSE_FAILURE
+            data = Data(interest.name)
+            data.content = struct.pack("i", response)
+            face.putData(data)
         else:
             commit = interest.applicationParameters.toBytes().decode("utf-8")
             timeout = interest.interestLifetimeMilliseconds / 1000.0 / 2.0

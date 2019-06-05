@@ -2,12 +2,19 @@
 
 import asyncio
 import logging
+import sys
 from ndngitsync.server import Server
 from pyndn import Face
 from pyndn.security import KeyChain
 
 
 def main():
+    if len(sys.argv) < 2:
+        print("Usage:", sys.argv[0], "command-prefix", file=sys.stderr)
+        return -1
+    else:
+        command_prefix = sys.argv[1]
+
     logging.basicConfig(format='[%(asctime)s]%(levelname)s:%(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S',
                         level=logging.INFO)
@@ -16,7 +23,7 @@ def main():
     face = Face()
     keychain = KeyChain()
     face.setCommandSigningInfo(keychain, keychain.getDefaultCertificateName())
-    server = Server(face, "/xinyu")
+    server = Server(face, command_prefix)
 
     async def face_loop():
         nonlocal face, server

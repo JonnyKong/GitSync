@@ -4,6 +4,7 @@ import sys
 import os
 import asyncio
 import struct
+import pickle
 from ndngitsync.gitfetcher import GitFetcher, GitProducer, fetch_data_packet
 from ndngitsync.storage import FileStorage
 from pyndn import Face, Name, Interest, Data
@@ -83,7 +84,20 @@ async def run(local_repo_path: str, repo_prefix: str):
                 # TODO: MAKE DATA AND INTEREST REAL
                 branch, commit, _ = parse_push(cmd, local_repo_path)
                 repo_name = repo_prefix.split("/")[-1]
-                interest = Interest(Name("/zhaoning/push").append(repo_name).append(branch))
+
+                # BranchInfo Interest
+                interest = Interest(Name(repo_prefix).append("branch-info").append(branch))
+                data = await fetch_data_packet(face, interest)
+                branchinfo = None
+                if isinstance(data, Data):
+                    branchinfo = pickle.loads(data.content.toBytes())
+                if branchinfo is None or 'custodian' not in branchinfo.__dict__:
+                    print("ERROR Interest got no response: ", interest.name, file=sys.stderr)
+                    print("error refs/heads/{} DISCONNECTED".format(branch))
+                    break
+
+                # Push Interest
+                interest = Interest(Name(branchinfo.custodian).append("push").append(repo_name).append(branch))
                 interest.applicationParameters = commit.encode("utf-8")
                 interest.appendParametersDigestToName()
                 interest.interestLifetimeMilliseconds = 20000
@@ -103,6 +117,7 @@ async def run(local_repo_path: str, repo_prefix: str):
                 else:
                     print("ERROR Interest got no response: ", interest.name, file=sys.stderr)
                     print("error refs/heads/{} DISCONNECTED".format(branch))
+                    break
 
                 # Read commands for next fetch
                 cmd = sys.stdin.readline().rstrip("\n\r")
@@ -124,9 +139,7 @@ async def run(local_repo_path: str, repo_prefix: str):
 def main():
     if len(sys.argv) < 3:
         print("Usage:", sys.argv[0], "remote-name url", file=sys.stderr)
-        # exit(-1)
-        local_repo_path = os.path.join(os.getcwd(), "testrepo")
-        repo_prefix = "/git/temprepo"
+        return -1
     else:
         local_repo_path = os.getcwd()
         repo_prefix = sys.argv[2]

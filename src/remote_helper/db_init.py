@@ -100,7 +100,7 @@ def init_repos(hash_name: str):
     head_data.content = hash_name.encode()
     
     data = BranchInfo("master")
-    data.custodian = "/zhaoning"
+    data.custodian = "/localhost/gitsync"
     data.key = ""
     data.timestamp = 0
     data.head = hash_name
