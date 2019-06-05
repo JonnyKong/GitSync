@@ -11,6 +11,8 @@ Git over NDN
 * [zlib 1.2.11](https://zlib.net) - Compression Library
 * [PyMongo](https://api.mongodb.com/python/current/) - Python MongoDB API (For unit testing)
 
+nfdc strategy set prefix /git strategy /localhost/nfd/strategy/multicast
+
 ### Build & Test with CMake
 
 Perform out-of-source build in a separate directory:
