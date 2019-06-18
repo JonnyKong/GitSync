@@ -47,8 +47,11 @@ class Sync:
                         self.state[branch] = timestamp
                         self.on_update(branch, timestamp)
 
-        raw_vec = interest.applicationParameters.toBytes().decode("utf-8")
-        new_state = self.decode(raw_vec)
+        if not interest.applicationParameters.isNull():
+            raw_vec = interest.applicationParameters.toBytes().decode("utf-8")
+            new_state = self.decode(raw_vec)
+        else:
+            new_state = {}
         event_loop = asyncio.get_event_loop()
         event_loop.create_task(update_state())
 
