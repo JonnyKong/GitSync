@@ -74,6 +74,7 @@ class Server:
             response = PUSH_RESPONSE_SUCCESS if result else PUSH_RESPONSE_FAILURE
         data = Data(interest.name)
         data.content = struct.pack("i", response)
+        data.metaInfo.freshnessPeriod = 1000
         face.putData(data)
 
     def on_track_repo(self, _prefix, interest: Interest, face, _filter_id, _filter):
@@ -89,4 +90,5 @@ class Server:
             response = PUSH_RESPONSE_SUCCESS
         data = Data(interest.name)
         data.content = struct.pack("i", response)
+        data.metaInfo.freshnessPeriod = 1000
         face.putData(data)

@@ -204,6 +204,7 @@ class GitProducer:
         if self.storage.exists(hash_name):
             data = Data(interest.name)
             data.content = self.storage.get(hash_name)
+            data.metaInfo.freshnessPeriod = 60000
             face.putData(data)
         else:
             logging.info("Not exist: %s", hash_name)

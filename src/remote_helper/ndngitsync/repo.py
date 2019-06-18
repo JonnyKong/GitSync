@@ -102,6 +102,7 @@ class Repo:
             return
         data = Data(interest.name)
         data.content = pickle.dumps(self.branches[branch])
+        data.metaInfo.freshnessPeriod = 1000
         face.putData(data)
 
     def on_refs_interest(self, _prefix, interest: Interest, face, _filter_id, _filter):
@@ -123,6 +124,7 @@ class Repo:
         data = Data()
         raw_data = pickle.loads(self.repo_db.get(branch))
         data.wireDecode(raw_data.head_data)
+        data.metaInfo.freshnessPeriod = 1000
         face.putData(data)
 
     def on_reflist_interest(self, _prefix, interest: Interest, face, _filter_id, _filter):
@@ -134,6 +136,7 @@ class Repo:
 
         data = Data(interest.name)
         data.content = result.encode("utf-8")
+        data.metaInfo.freshnessPeriod = 1000
         face.putData(data)
 
     def on_register_failed(self, prefix):
@@ -218,4 +221,5 @@ class Repo:
         logging.info("Push Result: %s", response)
         data = Data(name)
         data.content = struct.pack("i", response)
+        data.metaInfo.freshnessPeriod = 1000
         face.putData(data)
