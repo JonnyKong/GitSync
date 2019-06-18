@@ -6,9 +6,7 @@ import struct
 from ndngitsync.gitfetcher import fetch_data_packet
 from pyndn import Face, Name, Interest, Data
 from pyndn.security import KeyChain
-
-
-LOCAL_DAEMON_PREFIX = "/localhost/gitsync"
+from ndngitsync.config import LOCAL_CMD_PREFIX
 
 
 async def run(cmd: str):
@@ -30,7 +28,7 @@ async def run(cmd: str):
             print("Usage:", sys.argv[0], "track-repo <repo>", file=sys.stderr)
         else:
             repo = sys.argv[2]
-            interest = Interest(Name(LOCAL_DAEMON_PREFIX).append("track-repo").append(repo))
+            interest = Interest(Name(LOCAL_CMD_PREFIX).append("track-repo").append(repo))
             data = await fetch_data_packet(face, interest)
             if isinstance(data, Data):
                 result = struct.unpack("i", data.content.toBytes())[0]
@@ -48,7 +46,7 @@ async def run(cmd: str):
         else:
             repo = sys.argv[2]
             branch = sys.argv[3]
-            interest = Interest(Name(LOCAL_DAEMON_PREFIX).append("create-branch").append(repo).append(branch))
+            interest = Interest(Name(LOCAL_CMD_PREFIX).append("create-branch").append(repo).append(branch))
             data = await fetch_data_packet(face, interest)
             if isinstance(data, Data):
                 result = struct.unpack("i", data.content.toBytes())[0]
