@@ -10,6 +10,7 @@ from ndngitsync.storage import FileStorage
 from pyndn import Face, Name, Interest, Data
 from pyndn.security import KeyChain
 from typing import Tuple
+from ndngitsync.config import LOCAL_CMD_PREFIX
 
 
 def parse_push(cmd: str, local_repo_path: str) -> Tuple[str, str, bool]:
@@ -39,6 +40,7 @@ async def run(local_repo_path: str, repo_prefix: str):
     face_task = event_loop.create_task(face_loop())
     storage = FileStorage(os.path.join(local_repo_path, ".git"))
     producer = GitProducer(face, Name(repo_prefix).append("objects"), storage)
+    refs = []
 
     empty_cnt = 0
     while empty_cnt < 2 and running:
@@ -59,6 +61,12 @@ async def run(local_repo_path: str, repo_prefix: str):
             if isinstance(data, Data):
                 reflist = data.content.toBytes().decode("utf-8")
                 print(reflist)
+
+                if reflist.strip() == "":
+                    refs = {}
+                else:
+                    refs = [item.split(" ")[1] for item in reflist.strip().split("\n")]
+                    refs = {name.split("/")[-1] for name in refs}
             else:
                 print("error: Couldn't connect to", repo_prefix, file=sys.stderr)
                 running = False
@@ -84,6 +92,27 @@ async def run(local_repo_path: str, repo_prefix: str):
                 # TODO: MAKE DATA AND INTEREST REAL
                 branch, commit, _ = parse_push(cmd, local_repo_path)
                 repo_name = repo_prefix.split("/")[-1]
+
+                # Create Branch if not exist
+                if branch not in refs:
+                    print("Non-existing branch. Try to create...", file=sys.stderr)
+                    interest = Interest(Name(LOCAL_CMD_PREFIX).append("create-branch").append(repo_name).append(branch))
+                    data = await fetch_data_packet(face, interest)
+                    if isinstance(data, Data):
+                        result = struct.unpack("i", data.content.toBytes())[0]
+                        if result == 1:
+                            print("Creation succeeded", file=sys.stderr)
+                        elif result == 2:
+                            print("Creation is FAILED", file=sys.stderr)
+                            print("error refs/heads/{} FAILED".format(branch))
+                            break
+                        else:
+                            print("Creation is PENDING", file=sys.stderr)
+                            print("error refs/heads/{} PENDING".format(branch))
+                            break
+                    else:
+                        print("error: Couldn't connect to", interest.name.toUri(), file=sys.stderr)
+                        break
 
                 # BranchInfo Interest
                 interest = Interest(Name(repo_prefix).append("branch-info").append(branch))
