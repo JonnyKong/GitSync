@@ -1,2 +1,2 @@
 PyNDN >= 2.10b1
-pymongo >= 3.8.0
+plyvel >= 1.1.0

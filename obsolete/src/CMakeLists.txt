@@ -1,2 +1,0 @@
-add_subdirectory(remote_helper)
-add_subdirectory(server_daemon)

@@ -1,5 +1,5 @@
 from pyndn import Face, Name, Data, Interest
-from .storage import DBStorage, IStorage
+from .storage import DBStorage
 import asyncio
 import struct
 import logging
