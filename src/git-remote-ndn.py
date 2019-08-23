@@ -20,6 +20,14 @@ def parse_push(cmd: str, local_repo_path: str) -> Tuple[str, str, bool]:
     filename = os.path.join(local_repo_path, src)
     with open(filename, "r") as f:
         commit = f.readline().strip()
+
+    # Indirect ref
+    while commit.startswith('ref:'):
+        src = commit.split(" ")[1]
+        filename = os.path.join(local_repo_path, src)
+        with open(filename, "r") as f:
+            commit = f.readline().strip()
+
     branch = dst.split("/")[-1]
     print("PARSE:", branch, commit, forced, file=sys.stderr)
     return branch, commit, forced

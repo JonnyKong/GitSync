@@ -82,6 +82,23 @@ async def run(cmd: str):
                 print("Finished.")
             else:
                 print("error: Couldn't connect to", interest.name.toUri(), file=sys.stderr)
+    elif cmd == "commit":
+        if len(sys.argv) < 6:
+            print("Usage:", sys.argv[0], "commit <repo> <branch> <dest-branch> <message>", file=sys.stderr)
+        else:
+            repo = sys.argv[2]
+            branch = sys.argv[3]
+            dest_branch = sys.argv[4]
+            commit_msg = sys.argv[5]
+            interest = Interest(Name(LOCAL_CMD_PREFIX).append("commit"))
+            interest.applicationParameters = b'\x00'.join(
+                [repo.encode(), branch.encode(), dest_branch.encode(), commit_msg.encode()])
+            interest.appendParametersDigestToName()
+            data = await fetch_data_packet(face, interest)
+            if isinstance(data, Data):
+                print("Finished.")
+            else:
+                print("error: Couldn't connect to", interest.name.toUri(), file=sys.stderr)
     else:
         print("Unrecognized command:", cmd, file=sys.stderr)
 

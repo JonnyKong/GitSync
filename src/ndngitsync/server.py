@@ -6,6 +6,7 @@ import asyncio
 import struct
 import logging
 import os
+import subprocess
 from .config import *
 from .repo import Repo
 
@@ -26,6 +27,7 @@ class Server:
             self.face.setInterestFilter(Name(prefix).append("track-repo"), self.on_track_repo)
             self.face.setInterestFilter(Name(prefix).append("mount"), self.on_mount)
             self.face.setInterestFilter(Name(prefix).append("unmount"), self.on_unmount)
+            self.face.setInterestFilter(Name(prefix).append("commit"), self.on_commit)
 
         register_prefix(self.cmd_prefix)
         register_prefix(LOCAL_CMD_PREFIX)
@@ -121,6 +123,34 @@ class Server:
         dest_path = os.path.join(os.path.expanduser(MOUNT_PATH), repo, branch)
 
         shutil.rmtree(dest_path, ignore_errors=True)
+
+        # Respond with Data
+        data = Data(interest.name)
+        data.content = struct.pack("i", PUSH_RESPONSE_SUCCESS)
+        data.metaInfo.freshnessPeriod = 1000
+        face.putData(data)
+
+    def on_commit(self, _prefix, interest: Interest, face, _filter_id, _filter):
+        param = interest.applicationParameters.toBytes()
+        if not isinstance(param, bytes):
+            print("Malformed request")
+            return
+        param = param.split(b'\x00')
+        if len(param) != 4:
+            print("Malformed request")
+            return
+        repo, branch, dest_branch, commit_msg = map(bytes.decode, param)
+
+        env = os.environ
+        env['GIT_COMMITTER_NAME'] = 'GitSync'
+        env['GIT_WORK_TREE'] = os.path.join(os.path.expanduser(MOUNT_PATH), repo, branch)
+        env['GIT_DIR'] = os.path.join(env['GIT_WORK_TREE'], '.git')
+        repo_uri = "ndn::" + Name(GIT_PREFIX).append(repo).toUri()
+
+        # Commit (blocking)
+        subprocess.call(['git', 'commit', '-a', '-m', commit_msg], env=env)
+        # Push
+        os.spawnlpe(os.P_NOWAIT, 'git', 'git', 'push', repo_uri, 'HEAD:refs/heads/' + dest_branch, env)
 
         # Respond with Data
         data = Data(interest.name)
