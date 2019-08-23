@@ -31,7 +31,7 @@ class DBStorage(IStorage):
         """
         Return whether document exists
         """
-        return self.client.get(key.encode()) is None
+        return self.client.get(key.encode()) is not None
 
     def remove(self, key: str) -> bool:
         """
@@ -44,4 +44,4 @@ class DBStorage(IStorage):
         """
         Return a set of "primary" keys
         """
-        return (item[0] for item in self.client)
+        return (item[0].decode() for item in self.client)

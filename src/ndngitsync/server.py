@@ -1,8 +1,10 @@
+from typing import Union
 from pyndn import Face, Name, Data, Interest
 from .storage import DBStorage
 import asyncio
 import struct
 import logging
+import os
 from .config import *
 from .repo import Repo
 
@@ -16,15 +18,15 @@ class Server:
         self.repos_db = DBStorage(DATABASE_NAME, REPOS_COLL_NAME)
         self.cmd_prefix = Name(cmd_prefix)
 
-        self.face.registerPrefix(self.cmd_prefix, None, self.on_register_failed)
-        self.face.setInterestFilter(Name(self.cmd_prefix).append("push"), self.on_push)
-        self.face.setInterestFilter(Name(self.cmd_prefix).append("create-branch"), self.on_create_branch)
-        self.face.setInterestFilter(Name(self.cmd_prefix).append("track-repo"), self.on_track_repo)
+        def register_prefix(prefix: Union[str, Name]):
+            self.face.registerPrefix(prefix, None, self.on_register_failed)
+            self.face.setInterestFilter(Name(prefix).append("push"), self.on_push)
+            self.face.setInterestFilter(Name(prefix).append("create-branch"), self.on_create_branch)
+            self.face.setInterestFilter(Name(prefix).append("track-repo"), self.on_track_repo)
+            self.face.setInterestFilter(Name(prefix).append("mount"), self.on_mount)
 
-        self.face.registerPrefix(LOCAL_CMD_PREFIX, None, self.on_register_failed)
-        self.face.setInterestFilter(Name(LOCAL_CMD_PREFIX).append("push"), self.on_push)
-        self.face.setInterestFilter(Name(LOCAL_CMD_PREFIX).append("create-branch"), self.on_create_branch)
-        self.face.setInterestFilter(Name(LOCAL_CMD_PREFIX).append("track-repo"), self.on_track_repo)
+        register_prefix(self.cmd_prefix)
+        register_prefix(LOCAL_CMD_PREFIX)
 
         self.load_repos()
 
@@ -90,5 +92,22 @@ class Server:
             response = PUSH_RESPONSE_SUCCESS
         data = Data(interest.name)
         data.content = struct.pack("i", response)
+        data.metaInfo.freshnessPeriod = 1000
+        face.putData(data)
+
+    def on_mount(self, _prefix, interest: Interest, face, _filter_id, _filter):
+        logging.info("OnMount: %s", interest.name.toUri())
+        repo = interest.name[-2].toEscapedString()
+        branch = interest.name[-1].toEscapedString()
+        mount_path = os.path.join(os.path.expanduser(MOUNT_PATH), repo)
+        os.makedirs(mount_path, exist_ok=True)
+        repo_uri = "ndn::" + Name(GIT_PREFIX).append(repo).toUri()
+
+        os.spawnlp(os.P_NOWAIT, 'git', 'git', 'clone', '--single-branch',
+                   '--branch', branch, repo_uri, os.path.join(mount_path, branch))
+
+        # Respond with Data
+        data = Data(interest.name)
+        data.content = struct.pack("i", PUSH_RESPONSE_SUCCESS)
         data.metaInfo.freshnessPeriod = 1000
         face.putData(data)

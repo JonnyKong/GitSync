@@ -17,7 +17,7 @@ def parse_push(cmd: str, local_repo_path: str) -> Tuple[str, str, bool]:
     src, dst = cmd.split(" ")[1].split(":")
     forced = src[0] == "+"
     src = src.lstrip("+")
-    filename = os.path.join(local_repo_path, ".git", src)
+    filename = os.path.join(local_repo_path, src)
     with open(filename, "r") as f:
         commit = f.readline().strip()
     branch = dst.split("/")[-1]
@@ -32,13 +32,14 @@ async def run(local_repo_path: str, repo_prefix: str):
             face.processEvents()
             await asyncio.sleep(0.01)
 
+    options = {'cloning': False}
     running = True
     face = Face()
     keychain = KeyChain()
     face.setCommandSigningInfo(keychain, keychain.getDefaultCertificateName())
     event_loop = asyncio.get_event_loop()
     face_task = event_loop.create_task(face_loop())
-    storage = FileStorage(os.path.join(local_repo_path, ".git"))
+    storage = FileStorage(local_repo_path)
     producer = GitProducer(face, Name(repo_prefix).append("objects"), storage)
     refs = []
 
@@ -53,7 +54,12 @@ async def run(local_repo_path: str, repo_prefix: str):
             print("")
             sys.stdout.flush()
         elif cmd.startswith("option"):
-            print("unsupported")
+            opt_name, opt_val = cmd.split()[1:]
+            if opt_name == "cloning":
+                options['cloning'] = (opt_val == 'true')
+                print("ok")
+            else:
+                print("unsupported")
             sys.stdout.flush()
         elif cmd == "list" or cmd == "list for-push":
             interest = Interest(Name(repo_prefix).append("ref-list"))
@@ -79,6 +85,10 @@ async def run(local_repo_path: str, repo_prefix: str):
                 hash_name, ref_name = cmd.split()[1:]
                 fetcher.fetch(hash_name, "commit")
                 await fetcher.wait_until_finish()
+                # Set refs file
+                ref_file_path = os.path.join(local_repo_path, ref_name)
+                with open(ref_file_path, 'w') as f:
+                    f.write(hash_name)
                 # Read commands for next fetch
                 cmd = sys.stdin.readline().rstrip("\n\r")
                 if not cmd.startswith("fetch"):
@@ -170,7 +180,10 @@ def main():
         print("Usage:", sys.argv[0], "remote-name url", file=sys.stderr)
         return -1
     else:
-        local_repo_path = os.getcwd()
+        if 'GIT_DIR' in os.environ:
+            local_repo_path = os.environ['GIT_DIR']
+        else:
+            local_repo_path = os.path.join(os.getcwd(), ".git")
         repo_prefix = sys.argv[2]
     event_loop = asyncio.get_event_loop()
     try:
