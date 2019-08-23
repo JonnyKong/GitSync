@@ -1,6 +1,7 @@
 from typing import Union
 from pyndn import Face, Name, Data, Interest
 from .storage import DBStorage
+import shutil
 import asyncio
 import struct
 import logging
@@ -24,6 +25,7 @@ class Server:
             self.face.setInterestFilter(Name(prefix).append("create-branch"), self.on_create_branch)
             self.face.setInterestFilter(Name(prefix).append("track-repo"), self.on_track_repo)
             self.face.setInterestFilter(Name(prefix).append("mount"), self.on_mount)
+            self.face.setInterestFilter(Name(prefix).append("unmount"), self.on_unmount)
 
         register_prefix(self.cmd_prefix)
         register_prefix(LOCAL_CMD_PREFIX)
@@ -105,6 +107,20 @@ class Server:
 
         os.spawnlp(os.P_NOWAIT, 'git', 'git', 'clone', '--single-branch',
                    '--branch', branch, repo_uri, os.path.join(mount_path, branch))
+
+        # Respond with Data
+        data = Data(interest.name)
+        data.content = struct.pack("i", PUSH_RESPONSE_SUCCESS)
+        data.metaInfo.freshnessPeriod = 1000
+        face.putData(data)
+
+    def on_unmount(self, _prefix, interest: Interest, face, _filter_id, _filter):
+        logging.info("OnUnmount: %s", interest.name.toUri())
+        repo = interest.name[-2].toEscapedString()
+        branch = interest.name[-1].toEscapedString()
+        dest_path = os.path.join(os.path.expanduser(MOUNT_PATH), repo, branch)
+
+        shutil.rmtree(dest_path, ignore_errors=True)
 
         # Respond with Data
         data = Data(interest.name)

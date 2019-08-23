@@ -70,6 +70,18 @@ async def run(cmd: str):
                 print("Finished.")
             else:
                 print("error: Couldn't connect to", interest.name.toUri(), file=sys.stderr)
+    elif cmd == "unmount":
+        if len(sys.argv) < 4:
+            print("Usage:", sys.argv[0], "unmount <repo> <branch>", file=sys.stderr)
+        else:
+            repo = sys.argv[2]
+            branch = sys.argv[3]
+            interest = Interest(Name(LOCAL_CMD_PREFIX).append("unmount").append(repo).append(branch))
+            data = await fetch_data_packet(face, interest)
+            if isinstance(data, Data):
+                print("Finished.")
+            else:
+                print("error: Couldn't connect to", interest.name.toUri(), file=sys.stderr)
     else:
         print("Unrecognized command:", cmd, file=sys.stderr)
 
