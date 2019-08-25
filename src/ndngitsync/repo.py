@@ -21,6 +21,7 @@ class BranchInfo:
 
 class Repo:
     def __init__(self, objects_db: IStorage, repo_name: str, face: Face):
+        self.repo_name = repo_name
         self.repo_db = DBStorage(DATABASE_NAME, repo_name)
         self.objects_db = objects_db
         self.repo_prefix = Name(GIT_PREFIX).append(repo_name)
@@ -58,11 +59,7 @@ class Repo:
             # Fix the database
             if timestamp <= self.branches[branch].timestamp:
                 return
-            self.branches[branch].timestamp = timestamp
-            self.branches[branch].head = commit
-            self.branches[branch].head_data = data.wireEncode().toBytes()
-            self.repo_db.put(branch, pickle.dumps(self.branches[branch]))
-            self.branches[branch].head_data = b""
+            self.update_branch(branch, timestamp, commit, data.wireEncode().toBytes())
 
         if branch in self.branches:
             # Update existing branch
@@ -184,18 +181,14 @@ class Repo:
 
             # TODO W-A-W conflict
             timestamp = await self.sync.publish_data(branch)
-            self.branches[branch].timestamp = timestamp
-            self.branches[branch].head = commit
 
-            # Fix the database
             head_data_name = Name(self.repo_prefix).append("refs")
             head_data_name = head_data_name.append(branch).appendTimestamp(timestamp)
             head_data = Data(head_data_name)
             head_data.content = commit.encode("utf-8")
             # TODO Sign data
-            self.branches[branch].head_data = head_data.wireEncode().toBytes()
-            self.repo_db.put(branch, pickle.dumps(self.branches[branch]))
-            self.branches[branch].head_data = b""
+
+            self.update_branch(branch, timestamp, commit, head_data.wireEncode().toBytes())
             result = True
 
         event_loop = asyncio.get_event_loop()
@@ -223,3 +216,22 @@ class Repo:
         data.content = struct.pack("i", response)
         data.metaInfo.freshnessPeriod = 1000
         face.putData(data)
+
+    def update_branch(self, branch: str, timestamp: int, commit: str, head_data: bytes):
+        # Update database
+        self.branches[branch].timestamp = timestamp
+        self.branches[branch].head = commit
+        self.branches[branch].head_data = head_data
+        self.repo_db.put(branch, pickle.dumps(self.branches[branch]))
+        # Release Data in memory
+        self.branches[branch].head_data = b""
+
+        # Send notification Data
+        notif = Data(Name(LOCAL_CMD_PREFIX)
+                     .append("notif")
+                     .append(self.repo_name)
+                     .append(branch)
+                     .appendTimestamp(Sync.timestamp()))
+        notif.metaInfo.freshnessPeriod = 10
+        notif.content = commit.encode()
+        self.face.putData(notif)

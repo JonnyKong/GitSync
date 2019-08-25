@@ -100,6 +100,7 @@ class Server:
         face.putData(data)
 
     def on_mount(self, _prefix, interest: Interest, face, _filter_id, _filter):
+        # TODO: Do a better job (mount, unmount, commit)
         logging.info("OnMount: %s", interest.name.toUri())
         repo = interest.name[-2].toEscapedString()
         branch = interest.name[-1].toEscapedString()
