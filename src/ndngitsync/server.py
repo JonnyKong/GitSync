@@ -2,6 +2,7 @@ from typing import Union
 from pyndn import Face, Name, Data, Interest
 from .storage import DBStorage
 import shutil
+import random
 import asyncio
 import struct
 import logging
@@ -26,6 +27,7 @@ class Server:
             self.face.setInterestFilter(Name(prefix).append("create-branch"), self.on_create_branch)
             self.face.setInterestFilter(Name(prefix).append("track-repo"), self.on_track_repo)
             self.face.setInterestFilter(Name(prefix).append("mount"), self.on_mount)
+            self.face.setInterestFilter(Name(prefix).append("update"), self.on_update)
             self.face.setInterestFilter(Name(prefix).append("unmount"), self.on_unmount)
             self.face.setInterestFilter(Name(prefix).append("commit"), self.on_commit)
 
@@ -100,20 +102,75 @@ class Server:
         face.putData(data)
 
     def on_mount(self, _prefix, interest: Interest, face, _filter_id, _filter):
-        # TODO: Do a better job (mount, unmount, commit)
+        # TODO: Do a better job (mount, unmount, commit); support fetching and commit
+        #       Recover from malformed request
+        # Decode Interest
         logging.info("OnMount: %s", interest.name.toUri())
         repo = interest.name[-2].toEscapedString()
         branch = interest.name[-1].toEscapedString()
+
+        # Analyze commit
+        commit = None
+        if repo in self.repos:
+            repo_obj = self.repos[repo]
+            if branch in repo_obj.branches:
+                commit = repo_obj.branches[branch].head
+        if not commit:
+            # We should fetch
+            data = Data(interest.name)
+            data.content = struct.pack("i", PUSH_RESPONSE_FAILURE)
+            data.metaInfo.freshnessPeriod = 1000
+            face.putData(data)
+            return
+
+        # Call git to mount (not efficient)
         mount_path = os.path.join(os.path.expanduser(MOUNT_PATH), repo)
         os.makedirs(mount_path, exist_ok=True)
+        mount_path = os.path.join(mount_path, commit)
         repo_uri = "ndn::" + Name(GIT_PREFIX).append(repo).toUri()
 
-        os.spawnlp(os.P_NOWAIT, 'git', 'git', 'clone', '--single-branch',
-                   '--branch', branch, repo_uri, os.path.join(mount_path, branch))
+        os.spawnlp(os.P_NOWAIT, 'git', 'git', 'clone', '--depth', '1',
+                   '--branch', branch, repo_uri, mount_path)
 
         # Respond with Data
         data = Data(interest.name)
-        data.content = struct.pack("i", PUSH_RESPONSE_SUCCESS)
+        data.content = struct.pack("i", PUSH_RESPONSE_SUCCESS) + mount_path.encode()
+        data.metaInfo.freshnessPeriod = 1000
+        face.putData(data)
+
+    def on_update(self, _prefix, interest: Interest, face, _filter_id, _filter):
+        # Decode Interest
+        logging.info("OnClone: %s", interest.name.toUri())
+        repo = interest.name[-2].toEscapedString()
+        branch = interest.name[-1].toEscapedString()
+
+        # Analyze commit
+        commit = None
+        if repo in self.repos:
+            repo_obj = self.repos[repo]
+            if branch in repo_obj.branches:
+                commit = repo_obj.branches[branch].head
+        if not commit:
+            # We should fetch
+            data = Data(interest.name)
+            data.content = struct.pack("i", PUSH_RESPONSE_FAILURE)
+            data.metaInfo.freshnessPeriod = 1000
+            face.putData(data)
+            return
+
+        # Call git to mount (not efficient)
+        alphabet = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F']
+        mount_path = os.path.join(os.path.expanduser(MOUNT_PATH), repo)
+        os.makedirs(mount_path, exist_ok=True)
+        mount_path = os.path.join(mount_path, "tmp-" + "".join(random.choices(alphabet, k=25)))
+        repo_uri = "ndn::" + Name(GIT_PREFIX).append(repo).toUri()
+
+        os.spawnlp(os.P_NOWAIT, 'git', 'git', 'clone', '--depth', '1',
+                   '--branch', branch, repo_uri, mount_path)
+
+        # Respond with Data
+        data = Data(interest.name)
+        data.content = struct.pack("i", PUSH_RESPONSE_SUCCESS) + mount_path.encode()
         data.metaInfo.freshnessPeriod = 1000
         face.putData(data)
 
@@ -121,9 +178,10 @@ class Server:
         logging.info("OnUnmount: %s", interest.name.toUri())
         repo = interest.name[-2].toEscapedString()
         branch = interest.name[-1].toEscapedString()
-        dest_path = os.path.join(os.path.expanduser(MOUNT_PATH), repo, branch)
 
-        shutil.rmtree(dest_path, ignore_errors=True)
+        # Do nothing
+        # dest_path = os.path.join(os.path.expanduser(MOUNT_PATH), repo, branch)
+        # shutil.rmtree(dest_path, ignore_errors=True)
 
         # Respond with Data
         data = Data(interest.name)
@@ -140,11 +198,12 @@ class Server:
         if len(param) != 4:
             print("Malformed request")
             return
-        repo, branch, dest_branch, commit_msg = map(bytes.decode, param)
+        repo, dest_branch, path, commit_msg = map(bytes.decode, param)
 
         env = os.environ
         env['GIT_COMMITTER_NAME'] = 'GitSync'
-        env['GIT_WORK_TREE'] = os.path.join(os.path.expanduser(MOUNT_PATH), repo, branch)
+        # env['GIT_WORK_TREE'] = os.path.join(os.path.expanduser(MOUNT_PATH), repo, branch)
+        env['GIT_WORK_TREE'] = path
         env['GIT_DIR'] = os.path.join(env['GIT_WORK_TREE'], '.git')
         repo_uri = "ndn::" + Name(GIT_PREFIX).append(repo).toUri()
 

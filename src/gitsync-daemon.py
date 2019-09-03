@@ -9,6 +9,7 @@ from pyndn.security import KeyChain
 
 
 def main():
+    # TODO: Graceful shutdown
     if len(sys.argv) < 2:
         print("Usage:", sys.argv[0], "command-prefix", file=sys.stderr)
         return -1

@@ -22,6 +22,7 @@ async def run(cmd: str):
     face.setCommandSigningInfo(keychain, keychain.getDefaultCertificateName())
     event_loop = asyncio.get_event_loop()
     face_task = event_loop.create_task(face_loop())
+    Interest.setDefaultCanBePrefix(True)
 
     if cmd == "track-repo":
         if len(sys.argv) < 3:
@@ -67,7 +68,29 @@ async def run(cmd: str):
             interest = Interest(Name(LOCAL_CMD_PREFIX).append("mount").append(repo).append(branch))
             data = await fetch_data_packet(face, interest)
             if isinstance(data, Data):
-                print("Finished.")
+                content = data.content.toBytes()
+                ret_code = struct.unpack("i", content[:4])[0]
+                if ret_code == 1:
+                    print(content[4:].decode())
+                else:
+                    print("Failed")
+            else:
+                print("error: Couldn't connect to", interest.name.toUri(), file=sys.stderr)
+    elif cmd == "update":
+        if len(sys.argv) < 4:
+            print("Usage:", sys.argv[0], "update <repo> <branch>", file=sys.stderr)
+        else:
+            repo = sys.argv[2]
+            branch = sys.argv[3]
+            interest = Interest(Name(LOCAL_CMD_PREFIX).append("clone").append(repo).append(branch))
+            data = await fetch_data_packet(face, interest)
+            if isinstance(data, Data):
+                content = data.content.toBytes()
+                ret_code = struct.unpack("i", content[:4])[0]
+                if ret_code == 1:
+                    print(content[4:].decode())
+                else:
+                    print("Failed")
             else:
                 print("error: Couldn't connect to", interest.name.toUri(), file=sys.stderr)
     elif cmd == "unmount":
@@ -84,15 +107,15 @@ async def run(cmd: str):
                 print("error: Couldn't connect to", interest.name.toUri(), file=sys.stderr)
     elif cmd == "commit":
         if len(sys.argv) < 6:
-            print("Usage:", sys.argv[0], "commit <repo> <branch> <dest-branch> <message>", file=sys.stderr)
+            print("Usage:", sys.argv[0], "commit <repo> <dest-branch> <path> <message>", file=sys.stderr)
         else:
             repo = sys.argv[2]
-            branch = sys.argv[3]
-            dest_branch = sys.argv[4]
+            dest_branch = sys.argv[3]
+            path = sys.argv[4]
             commit_msg = sys.argv[5]
             interest = Interest(Name(LOCAL_CMD_PREFIX).append("commit"))
             interest.applicationParameters = b'\x00'.join(
-                [repo.encode(), branch.encode(), dest_branch.encode(), commit_msg.encode()])
+                [repo.encode(), dest_branch.encode(), path.encode(), commit_msg.encode()])
             interest.appendParametersDigestToName()
             data = await fetch_data_packet(face, interest)
             if isinstance(data, Data):
